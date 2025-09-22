@@ -1,0 +1,24 @@
+{# D:\New_GAT\templates\class_subjects\list.html (УЛУЧШЕННАЯ ВЕРСИЯ) #}
+{% extends 'base.html' %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="flex justify-between items-center mb-6">
+    <div>
+        <a href="{% url 'management' %}" class="text-indigo-600 hover:underline mb-2 inline-block">&larr; Назад к Управлению</a>
+        <h1 class="text-3xl font-bold text-gray-800">{{ title }}</h1>
+    </div>
+    <a href="{% url 'class_subject_add' %}" class="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors">
+        + Добавить в план
+    </a>
+</div>
+
+{% for class_item in classes %}
+    {% include 'components/_class_subject_table.html' with class_item=class_item %}
+{% empty %}
+    <div class="bg-blue-100 text-blue-800 p-6 rounded-lg shadow text-center">
+        <p>Сначала добавьте классы, чтобы составить для них учебный план.</p>
+    </div>
+{% endfor %}
+{% endblock %}

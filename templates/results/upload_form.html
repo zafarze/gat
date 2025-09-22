@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<h1 class="text-3xl font-bold text-gray-800 mb-6">{{ title }}</h1>
+
+<div class="bg-white p-8 rounded-lg shadow-md max-w-2xl">
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        
+        {% if form.non_field_errors %}
+            <div class="p-4 mb-4 text-sm text-red-800 rounded-lg bg-red-100">
+                {% for error in form.non_field_errors %}
+                    {{ error }}
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        <div class="mb-6">
+            <label for="{{ form.gat_test.id_for_label }}" class="block text-sm font-medium text-gray-700">{{ form.gat_test.label }}</label>
+            {{ form.gat_test }}
+            {% if form.gat_test.errors %}
+                <p class="mt-1 text-sm text-red-600">{{ form.gat_test.errors|striptags }}</p>
+            {% endif %}
+        </div>
+
+        <div class="mb-6">
+            <label for="{{ form.file.id_for_label }}" class="block text-sm font-medium text-gray-700">{{ form.file.label }}</label>
+            {{ form.file }}
+            {% if form.file.errors %}
+                <p class="mt-1 text-sm text-red-600">{{ form.file.errors|striptags }}</p>
+            {% endif %}
+        </div>
+
+        <div class="mt-8 flex justify-end">
+            <button type="submit" class="bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700 transition-colors">
+                Загрузить и обработать
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}

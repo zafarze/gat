@@ -1,0 +1,37 @@
+{# D:\New_GAT\templates\results\detailed_results_list.html (УЛУЧШЕННАЯ ВЕРСИЯ) #}
+{% extends 'base.html' %}
+{% load custom_filters %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+
+{# --- Блок с заголовком и кнопками --- #}
+<div class="flex flex-wrap justify-between items-center gap-4 mb-6">
+    <div>
+        {# --- ИЗМЕНЕНИЕ: Добавили заголовок для ясности --- #}
+        <h1 class="text-3xl font-bold text-gray-800">{{ title }}</h1>
+        {% if students_data %}
+            {% with first_result=students_data.0.result %}
+                <p class="text-sm text-gray-500 mt-1">
+                    Тест: {{ first_result.gat_test.name }} (Класс: {{ first_result.student.school_class.name }})
+                </p>
+            {% endwith %}
+        {% endif %}
+    </div>
+    <div class="flex items-center gap-2">
+        <a href="{% url 'export_detailed_results_excel' test_number=test_number %}" class="bg-green-100 text-green-800 px-4 py-2 rounded-lg hover:bg-green-200 text-sm font-medium">
+            Экспорт в Excel
+        </a>
+        <a href="{% url 'export_detailed_results_pdf' test_number=test_number %}" class="bg-red-100 text-red-700 px-4 py-2 rounded-lg hover:bg-red-200 text-sm font-medium">
+            Экспорт в PDF
+        </a>
+    </div>
+</div>
+
+{# --- ГЛАВНОЕ ИЗМЕНЕНИЕ: Включаем наш идеальный компонент --- #}
+<div class="bg-white shadow-md rounded-lg overflow-x-auto">
+    {% include 'results/includes/detailed_table.html' %}
+</div>
+
+{% endblock %}

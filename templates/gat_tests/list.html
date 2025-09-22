@@ -1,0 +1,27 @@
+{# D:\New_GAT\templates\gat_tests\list.html (УЛУЧШЕННАЯ ВЕРСИЯ) #}
+{% extends 'base.html' %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="flex justify-between items-center mb-6">
+    <div>
+        <a href="{% url 'management' %}" class="text-indigo-600 hover:underline mb-2 inline-block">&larr; Назад к Управлению</a>
+        <h1 class="text-3xl font-bold text-gray-800">{{ title }}</h1>
+    </div>
+    <a href="{% url 'gat_test_add' %}" class="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors">
+        + Назначить GAT Тест
+    </a>
+</div>
+
+{% for school, tests in grouped_tests.items %}
+    {# Просто вызываем наш новый компонент в цикле #}
+    {% include 'components/_school_test_table.html' with school=school tests=tests %}
+{% empty %}
+    <div class="bg-white p-8 rounded-lg shadow text-center">
+        <p class="text-gray-500">Нет назначенных тестов.</p>
+        <p class="mt-2 text-sm text-gray-400">Нажмите кнопку "+ Назначить GAT Тест" выше, чтобы создать первый тест.</p>
+    </div>
+{% endfor %}
+
+{% endblock %}

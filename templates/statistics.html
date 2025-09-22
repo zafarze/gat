@@ -1,0 +1,133 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+    <h1 class="text-3xl font-bold text-gray-800 mb-6">{{ title }}</h1>
+
+    {# --- НОВАЯ ПАНЕЛЬ ФИЛЬТРОВ --- #}
+    <div class="bg-white p-4 rounded-lg shadow mb-8">
+        <form method="get" class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+            <div>
+                <label for="quarter" class="block text-sm font-medium text-gray-700">Четверть</label>
+                <select name="quarter" id="quarter" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
+                    <option value="">Все четверти</option>
+                    {% for q in quarters %}<option value="{{ q.id }}" {% if q.id == selected_quarter_id %}selected{% endif %}>{{ q }}</option>{% endfor %}
+                </select>
+            </div>
+            <div>
+                <label for="school" class="block text-sm font-medium text-gray-700">Школа</label>
+                <select name="school" id="school" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
+                    <option value="">Все школы</option>
+                    {% for s in schools %}<option value="{{ s.id }}" {% if s.id == selected_school_id %}selected{% endif %}>{{ s.name }}</option>{% endfor %}
+                </select>
+            </div>
+            <div>
+                <label for="test_number" class="block text-sm font-medium text-gray-700">Тест</label>
+                <select name="test_number" id="test_number" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
+                    <option value="">Все тесты</option>
+                    <option value="1" {% if selected_test_number == 1 %}selected{% endif %}>GAT-1</option>
+                    <option value="2" {% if selected_test_number == 2 %}selected{% endif %}>GAT-2</option>
+                </select>
+            </div>
+            <button type="submit" class="w-full bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700">Применить</button>
+        </form>
+    </div>
+
+    {# --- НОВЫЕ KPI КАРТОЧКИ --- #}
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+        <div class="bg-white p-6 rounded-lg shadow">
+            <h3 class="text-sm font-medium text-gray-500">Средний балл</h3>
+            <p class="mt-2 text-3xl font-bold text-indigo-600">{{ average_score }}</p>
+        </div>
+        <div class="bg-white p-6 rounded-lg shadow">
+            <h3 class="text-sm font-medium text-gray-500">Процент успеваемости (>50%)</h3>
+            <p class="mt-2 text-3xl font-bold text-green-600">{{ pass_rate }}%</p>
+        </div>
+        <div class="bg-white p-6 rounded-lg shadow">
+            <h3 class="text-sm font-medium text-gray-500">Сдано тестов / Учеников</h3>
+            <p class="mt-2 text-3xl font-bold text-gray-900">{{ total_tests_taken }} / {{ total_students }}</p>
+        </div>
+        <div class="bg-white p-6 rounded-lg shadow border-l-4 border-green-500">
+            <h3 class="text-sm font-medium text-gray-500">Лучший предмет</h3>
+            <p class="mt-2 text-xl font-bold text-gray-800">{{ top_subject.name }}</p>
+            <p class="text-lg font-bold text-green-500">{{ top_subject.percentage }}%</p>
+        </div>
+        <div class="bg-white p-6 rounded-lg shadow border-l-4 border-red-500">
+            <h3 class="text-sm font-medium text-gray-500">Предмет для улучшения</h3>
+            <p class="mt-2 text-xl font-bold text-gray-800">{{ bottom_subject.name }}</p>
+            <p class="text-lg font-bold text-red-500">{{ bottom_subject.percentage }}%</p>
+        </div>
+    </div>
+
+    {# --- НОВЫЕ ГРАФИКИ --- #}
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+        <div class="bg-white p-6 rounded-lg shadow">
+            <h2 class="text-xl font-bold text-gray-800 mb-4">Успеваемость по предметам</h2>
+            <canvas id="subjectPerfChart"></canvas>
+        </div>
+        <div class="bg-white p-6 rounded-lg shadow">
+            <h2 class="text-xl font-bold text-gray-800 mb-4">Распределение баллов по ученикам</h2>
+            <canvas id="scoreDistributionChart"></canvas>
+        </div>
+    </div>
+    
+    {# --- НОВАЯ ТАБЛИЦА --- #}
+    <div class="bg-white shadow-md rounded-lg overflow-x-auto">
+        <h2 class="text-xl font-bold text-gray-800 p-6">Топ-10 учеников</h2>
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Место</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ученик</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Класс</th>
+                    <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Итоговый балл</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                {% for item in top_10_students %}
+                <tr class="hover:bg-gray-50">
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ forloop.counter }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ item.student }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ item.student.school_class.name }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-center font-bold text-indigo-600">{{ item.score }}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="4" class="px-6 py-4 text-center text-gray-500">Нет данных для отображения.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // График 1: Успеваемость по предметам
+    new Chart(document.getElementById('subjectPerfChart'), {
+        type: 'bar',
+        data: {
+            labels: {{ subject_perf_labels|safe }},
+            datasets: [{
+                label: '% правильных ответов',
+                data: {{ subject_perf_data|safe }},
+                backgroundColor: 'rgba(79, 70, 229, 0.8)'
+            }]
+        },
+        options: { indexAxis: 'y', responsive: true, plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true, max: 100 } } }
+    });
+
+    // График 2: Распределение баллов
+    new Chart(document.getElementById('scoreDistributionChart'), {
+        type: 'bar',
+        data: {
+            labels: {{ distribution_labels|safe }},
+            datasets: [{
+                label: 'Количество учеников',
+                data: {{ distribution_data|safe }},
+                backgroundColor: 'rgba(16, 185, 129, 0.8)'
+            }]
+        },
+        options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, title: {display: true, text: 'Кол-во учеников'} }, x: { title: {display: true, text: 'Баллы'} } } }
+    });
+</script>
+
+{% endblock %}

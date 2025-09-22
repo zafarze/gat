@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="flex justify-between items-center mb-6">
+    <div>
+        {# --- УЛУЧШЕНИЕ 1: Добавляем "хлебные крошки" для навигации --- #}
+        <a href="{% url cancel_url %}" class="text-indigo-600 hover:underline mb-2 inline-block">&larr; Отмена и возврат к списку</a>
+        <h1 class="text-3xl font-bold text-red-600">{{ title }}</h1>
+    </div>
+</div>
+
+<div class="bg-white p-8 rounded-lg shadow-md max-w-2xl">
+    <p class="text-lg text-gray-700">Вы уверены, что хотите удалить <strong>"{{ item }}"</strong>?</p>
+    <p class="text-gray-500 mt-2">Это действие нельзя будет отменить.</p>
+    
+    {# --- УЛУЧШЕНИЕ 2: Гибкий блок для дополнительных предупреждений --- #}
+    {% block extra_warning %}{% endblock %}
+    
+    <form method="post">
+        {% csrf_token %}
+        <div class="mt-8 flex justify-end space-x-4">
+            <a href="{% url cancel_url %}" class="bg-gray-200 text-gray-800 px-6 py-2 rounded-lg hover:bg-gray-300">
+                Нет, отменить
+            </a>
+            <button type="submit" class="bg-red-600 text-white px-6 py-2 rounded-lg hover:bg-red-700">
+                Да, подтверждаю удаление
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}

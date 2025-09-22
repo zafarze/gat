@@ -1,0 +1,14 @@
+{# D:\New_GAT\templates\schools\list.html (УЛУЧШЕННАЯ ВЕРСИЯ) #}
+{% extends "components/_list_base.html" %}
+
+{% block table_headers %}
+    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase w-16">№</th>
+    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Название школы</th>
+    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Адрес</th>
+{% endblock %}
+
+{% block table_row %}
+    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ forloop.counter }}</td>
+    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ item.name }}</td>
+    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ item.address }}</td>
+{% endblock %}

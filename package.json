@@ -1,0 +1,17 @@
+{
+  "name": "new_gat",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "tailwind:init": "tailwindcss init",
+    "tailwind:watch": "tailwindcss -i ./static/css/input.css -o ./static/css/style.css --watch",
+    "build": "tailwindcss -i ./static/css/input.css -o ./static/css/style.css --minify"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "tailwindcss": "^3.4.10"
+  }
+}

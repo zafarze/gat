@@ -1,0 +1,30 @@
+{% csrf_token %}
+
+{% if form.non_field_errors %}
+    <div class="p-4 mb-4 text-sm text-red-800 rounded-lg bg-red-100">
+        {% for error in form.non_field_errors %}
+            {{ error }}
+        {% endfor %}
+    </div>
+{% endif %}
+
+{% for field in form %}
+<div class="mb-4">
+    <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-gray-700">{{ field.label }}</label>
+    {{ field }}
+    {% if field.help_text %}
+        <p class="mt-1 text-xs text-gray-500">{{ field.help_text }}</p>
+    {% endif %}
+    {% if field.errors %}
+        <p class="mt-1 text-sm text-red-600">{{ field.errors|striptags }}</p>
+    {% endif %}
+</div>
+{% endfor %}
+
+<div class="mt-8 flex justify-end space-x-4">
+    {# --- ИСПРАВЛЕННАЯ СТРОКА НИЖЕ --- #}
+    <a href="{% url cancel_url %}" class="bg-gray-200 text-gray-800 px-6 py-2 rounded-lg hover:bg-gray-300">Отмена</a>
+    <button type="submit" class="bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700">
+        Сохранить
+    </button>
+</div>

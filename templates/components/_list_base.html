@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+
+{% block content %}
+{# Оборачиваем всю страницу в Alpine.js компонент с переменными для двух окон #}
+<div 
+    x-data="{ 
+        showDeleteModal: false, 
+        deleteUrl: '',
+        deleteItemName: '',
+        showEditModal: false,
+        editUrl: ''
+    }"
+    @keydown.escape.window="showDeleteModal = false; showEditModal = false"
+>
+    <div class="flex justify-between items-center mb-6">
+        <div>
+            <a href="{% url 'management' %}" class="text-indigo-600 hover:underline mb-2 inline-block">&larr; Назад к Управлению</a>
+            <h1 class="text-3xl font-bold text-gray-800">{{ title }}</h1>
+        </div>
+        {% if add_url %}
+        <a href="{% url add_url %}" class="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors">
+            + {% block add_button_text %}Добавить{% endblock %}
+        </a>
+        {% endif %}
+    </div>
+
+    <div class="bg-white shadow-md rounded-lg overflow-hidden">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    {% block table_headers %}{% endblock %}
+                    <th scope="col" class="relative px-6 py-3">
+                        <span class="sr-only">Действия</span>
+                    </th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                {% for item in items %}
+                <tr>
+                    {% block table_row %}{% endblock %}
+                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        
+                        {# --- Кнопка РЕДАКТИРОВАТЬ, открывает свое окно --- #}
+                        <button 
+                            @click="showEditModal = true; editUrl = '{% url edit_url item.pk %}?popup=1';"
+                            class="text-indigo-600 hover:text-indigo-900"
+                        >
+                            Редактировать
+                        </button>
+                        
+                        {# --- Кнопка УДАЛИТЬ, открывает свое окно --- #}
+                        <button 
+                            @click="showDeleteModal = true; deleteUrl = '{% url delete_url item.pk %}'; deleteItemName = '{{ item|escapejs }}';"
+                            class="text-red-600 hover:text-red-900 ml-4"
+                        >
+                            Удалить
+                        </button>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="100%" class="px-6 py-4 text-center text-gray-500">
+                        {% block empty_list_text %}Нет данных для отображения.{% endblock %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {# --- МОДАЛЬНОЕ ОКНО ДЛЯ УДАЛЕНИЯ --- #}
+    <div 
+        x-show="showDeleteModal" 
+        x-transition:enter="ease-out duration-300"
+        x-transition:enter-start="opacity-0"
+        x-transition:enter-end="opacity-100"
+        x-transition:leave="ease-in duration-200"
+        x-transition:leave-start="opacity-100"
+        x-transition:leave-end="opacity-0"
+        class="fixed inset-0 z-30 overflow-y-auto bg-gray-500 bg-opacity-75"
+        style="display: none;"
+    >
+        <div class="flex items-center justify-center min-h-screen">
+            <div 
+                @click.away="showDeleteModal = false"
+                class="bg-white rounded-lg shadow-xl p-6 m-4 max-w-lg w-full"
+            >
+                <h3 class="text-2xl font-bold text-gray-800 mb-2">Подтвердите удаление</h3>
+                <p class="text-gray-600">Вы уверены, что хотите удалить <strong x-text="deleteItemName"></strong>?</p>
+                <p class="text-gray-500 text-sm mt-1">Это действие нельзя будет отменить.</p>
+
+                <form :action="deleteUrl" method="post" class="mt-6 flex justify-end space-x-4">
+                    {% csrf_token %}
+                    <button type="button" @click="showDeleteModal = false" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300">
+                        Нет, отменить
+                    </button>
+                    <button type="submit" class="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700">
+                        Да, удалить
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    {# --- МОДАЛЬНОЕ ОКНО ДЛЯ РЕДАКТИРОВАНИЯ --- #}
+    <div 
+        x-show="showEditModal" 
+        @click.self="showEditModal = false"
+        x-transition:enter="ease-out duration-300"
+        x-transition:enter-start="opacity-0 scale-95"
+        x-transition:enter-end="opacity-100 scale-100"
+        x-transition:leave="ease-in duration-200"
+        x-transition:leave-start="opacity-100 scale-100"
+        x-transition:leave-end="opacity-0 scale-95"
+        class="fixed inset-0 z-20 overflow-hidden bg-gray-500 bg-opacity-75 flex items-center justify-center"
+        style="display: none;"
+    >
+        <div class="bg-gray-100 rounded-lg shadow-xl w-full max-w-3xl h-5/6 flex flex-col">
+            <header class="p-4 flex justify-between items-center border-b bg-white rounded-t-lg flex-shrink-0">
+                <h3 class="text-xl font-bold text-gray-800">Редактирование</h3>
+                <button @click="showEditModal = false" class="text-gray-500 hover:text-gray-800 text-2xl font-bold">&times;</button>
+            </header>
+            <main class="flex-1 overflow-y-auto">
+                <iframe :src="editUrl" class="w-full h-full border-0" x-show="showEditModal"></iframe>
+            </main>
+        </div>
+    </div>
+</div>
+{% endblock %}

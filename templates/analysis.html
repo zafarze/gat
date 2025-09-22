@@ -1,0 +1,131 @@
+{% extends 'base.html' %}
+{# --- ИСПРАВЛЕНИЕ ЗДЕСЬ: ДОБАВЛЕНА ЗАГРУЗКА ФИЛЬТРОВ --- #}
+{% load custom_filters %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<h1 class="text-3xl font-bold text-gray-800 mb-6">{{ title }}</h1>
+
+{# --- НОВАЯ, УПРОЩЕННАЯ ФОРМА ФИЛЬТРОВ --- #}
+<div class="bg-white p-6 rounded-lg shadow mb-8">
+    <form method="get" id="analysis-form">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+                <label for="quarter" class="block text-sm font-medium text-gray-700">Четверть</label>
+                <select name="quarter" id="quarter" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
+                    <option value="">Выберите четверть...</option>
+                    {% for quarter in quarters %}
+                        <option value="{{ quarter.id }}" {% if quarter.id == selected_quarter_id %}selected{% endif %}>{{ quarter }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label for="school" class="block text-sm font-medium text-gray-700">Школа</label>
+                <select name="school" id="school" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
+                    <option value="">Выберите школу...</option>
+                    {% for school in schools %}
+                        <option value="{{ school.id }}" {% if school.id == selected_school_id %}selected{% endif %}>{{ school.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label for="test_number" class="block text-sm font-medium text-gray-700">Тест</label>
+                <select name="test_number" id="test_number" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
+                    <option value="">Выберите тест...</option>
+                    <option value="1" {% if selected_test_number == 1 %}selected{% endif %}>GAT-1</option>
+                    <option value="2" {% if selected_test_number == 2 %}selected{% endif %}>GAT-2</option>
+                </select>
+            </div>
+        </div>
+        <div class="mt-4 flex justify-end">
+            <button type="submit" class="bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700">Применить</button>
+        </div>
+    </form>
+</div>
+
+{% if has_results %}
+    <div class="grid grid-cols-1 xl:grid-cols-2 gap-8">
+        {# --- НОВЫЙ ГРАФИК --- #}
+        <div class="bg-white p-6 rounded-lg shadow">
+            <h2 class="text-xl font-bold text-gray-800 mb-4">Сравнение успеваемости классов по предметам</h2>
+            <canvas id="comparisonChart"></canvas>
+        </div>
+        {# --- НОВАЯ ТАБЛИЦА --- #}
+        <div class="bg-white shadow-md rounded-lg overflow-x-auto">
+             <h2 class="text-xl font-bold text-gray-800 p-6">Детальные данные (% правильных ответов)</h2>
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Предмет</th>
+                        {% for class_name in table_headers %}
+                            <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">{{ class_name }}</th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% for subject_name, class_scores in table_data.items %}
+                    <tr>
+                        <td class="px-6 py-4 whitespace-nowrap font-medium text-gray-900">{{ subject_name }}</td>
+                        {% for class_name in table_headers %}
+                            <td class="px-6 py-4 whitespace-nowrap text-center font-bold text-indigo-600">
+                                {{ class_scores|get_item:class_name }}%
+                            </td>
+                        {% endfor %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+{% else %}
+    {% if request.GET.school and request.GET.quarter and request.GET.test_number %}
+        <div class="bg-yellow-100 text-yellow-800 p-6 rounded-lg shadow text-center">
+            <h3 class="font-bold text-lg">Результаты не найдены</h3>
+            <p>Попробуйте изменить параметры фильтра. Возможно, по вашему запросу нет данных.</p>
+        </div>
+    {% else %}
+         <div class="bg-blue-100 text-blue-800 p-6 rounded-lg shadow text-center">
+            <h3 class="font-bold text-lg">Начните анализ</h3>
+            <p>Выберите четверть, школу и тест в фильтре выше, чтобы построить сравнительный отчет.</p>
+        </div>
+    {% endif %}
+{% endif %}
+
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    {% if has_results %}
+        const ctx = document.getElementById('comparisonChart').getContext('2d');
+        const labels = {{ chart_labels|safe }};
+        const datasets = {{ chart_datasets|safe }};
+        const colorPalette = ['rgba(59, 130, 246, 0.8)','rgba(239, 68, 68, 0.8)','rgba(16, 185, 129, 0.8)','rgba(245, 158, 11, 0.8)','rgba(139, 92, 246, 0.8)','rgba(236, 72, 153, 0.8)'];
+
+        datasets.forEach((dataset, index) => {
+            dataset.backgroundColor = colorPalette[index % colorPalette.length];
+        });
+
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: datasets
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 100,
+                        title: { display: true, text: '% правильных ответов' }
+                    }
+                },
+                plugins: {
+                    legend: { position: 'top' }
+                }
+            }
+        });
+    {% endif %}
+</script>
+
+{% endblock %}

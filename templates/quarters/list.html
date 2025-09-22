@@ -1,0 +1,18 @@
+{# D:\New_GAT\templates\quarters\list.html #}
+{% extends "components/_list_base.html" %}
+
+{% block table_headers %}
+    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase w-16">№</th>
+    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Название четверти</th>
+    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Учебный год</th>
+    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Дата начала</th>
+    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Дата окончания</th>
+{% endblock %}
+
+{% block table_row %}
+    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ forloop.counter }}</td>
+    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ item.name }}</td>
+    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ item.year.name }}</td>
+    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ item.start_date|date:"d.m.Y" }}</td>
+    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ item.end_date|date:"d.m.Y" }}</td>
+{% endblock %}

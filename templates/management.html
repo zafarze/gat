@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+
+{% block title %}Управление - Моя Админка{% endblock %}
+
+{% block content %}
+    <h1 class="text-3xl font-bold text-gray-800 mb-6">Управление</h1>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        
+        <a href="{% url 'year_list' %}" class="bg-white p-6 rounded-lg shadow-md hover:shadow-xl transition-shadow">
+            <h2 class="text-xl font-bold text-gray-800">Учебные Годы</h2>
+            <p class="text-gray-500 mt-2">Управление учебными годами и их датами.</p>
+        </a>
+        
+        <a href="{% url 'quarter_list' %}" class="bg-white p-6 rounded-lg shadow-md hover:shadow-xl transition-shadow">
+            <h2 class="text-xl font-bold text-gray-800">Четверти</h2>
+            <p class="text-gray-500 mt-2">Управление учебными четвертями.</p>
+        </a>
+        
+        <a href="{% url 'school_list' %}" class="bg-white p-6 rounded-lg shadow-md hover:shadow-xl transition-shadow">
+            <h2 class="text-xl font-bold text-gray-800">Школы</h2>
+            <p class="text-gray-500 mt-2">Добавление и редактирование школ.</p>
+        </a>
+        
+        <a href="{% url 'class_list' %}" class="bg-white p-6 rounded-lg shadow-md hover:shadow-xl transition-shadow">
+            <h2 class="text-xl font-bold text-gray-800">Классы</h2>
+            <p class="text-gray-500 mt-2">Управление классами в школах.</p>
+        </a>
+        
+        <a href="{% url 'subject_list' %}" class="bg-white p-6 rounded-lg shadow-md hover:shadow-xl transition-shadow">
+            <h2 class="text-xl font-bold text-gray-800">Предметы</h2>
+            <p class="text-gray-500 mt-2">Управление учебными предметами.</p>
+        </a>
+
+        <a href="{% url 'class_subject_list' %}" class="bg-white p-6 rounded-lg shadow-md hover:shadow-xl transition-shadow">
+            <h2 class="text-xl font-bold text-gray-800">Учебный план</h2>
+            <p class="text-gray-500 mt-2">Назначение предметов классам.</p>
+        </a>
+        
+        <a href="{% url 'gat_test_list' %}" class="bg-white p-6 rounded-lg shadow-md hover:shadow-xl transition-shadow">
+            <h2 class="text-xl font-bold text-gray-800">GAT Тесты</h2>
+            <p class="text-gray-500 mt-2">Создание и управление GAT тестами.</p>
+        </a>
+
+        <a href="{% url 'upload_results' %}" class="bg-white p-6 rounded-lg shadow-md hover:shadow-xl transition-shadow border-2 border-indigo-500">
+            <h2 class="text-xl font-bold text-indigo-600">Загрузить результаты</h2>
+            <p class="text-gray-500 mt-2">Массовая загрузка результатов учеников из Excel.</p>
+        </a>
+        </div>
+{% endblock %}
