@@ -1,170 +1,312 @@
 {% extends 'base.html' %}
 {% load custom_filters %}
+{% load static %}
 
 {% block title %}{{ title }}{% endblock %}
 
+{% block head %}
+{# Подключаем внешний файл со стилями #}
+<link rel="stylesheet" href="{% static 'css/deep_analysis.css' %}">
+{% endblock %}
+
 {% block content %}
-<h1 class="text-3xl font-bold text-gray-800 mb-6">{{ title }}</h1>
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <h1 class="text-4xl font-bold mb-2 gradient-text">{{ title }}</h1>
+    <p class="text-lg text-gray-600 mb-8">Анализ успеваемости и образовательной динамики</p>
 
-{# --- БЛОК С ФИЛЬТРАМИ --- #}
-<div class="bg-white p-6 rounded-lg shadow mb-8">
-    <form method="get">
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <div>{{ form.quarter.label_tag }} {{ form.quarter }}</div>
-            <div>{{ form.test_number.label_tag }} {{ form.test_number }}</div>
-            <div>{{ form.schools.label_tag }} {{ form.schools }}</div>
-            <div>{{ form.school_classes.label_tag }} {{ form.school_classes }}</div>
-            <div class="lg:col-span-2">{{ form.subjects.label_tag }} {{ form.subjects }}</div>
+    <div class="glass-card p-6 rounded-2xl mb-8">
+        <div class="flex flex-wrap justify-between items-center gap-4 mb-6">
+            <h2 class="text-2xl font-bold text-gray-800">Фильтры анализа</h2>
+            <div class="flex items-center space-x-3">
+                <select id="saved-reports" class="text-sm rounded-xl border-gray-300 shadow-sm px-4 py-2 focus:ring-2 focus:ring-primary focus:border-transparent"></select>
+                <button id="save-report-btn" class="btn btn-primary">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                    </svg>
+                    Сохранить
+                </button>
+                <button id="delete-report-btn" class="btn btn-danger">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" />
+                    </svg>
+                    Удалить
+                </button>
+            </div>
         </div>
-        <div class="mt-6 flex justify-end">
-            <button type="submit" class="bg-indigo-600 text-white px-8 py-3 rounded-lg hover:bg-indigo-700 font-bold">Сравнить</button>
-        </div>
-    </form>
-</div>
-
-{% if has_results %}
-    {# --- БЛОК С ГРАФИКОМ --- #}
-    <div class="bg-white p-6 rounded-lg shadow mb-8">
-        <h2 class="text-xl font-bold text-gray-800 mb-4">Общая успеваемость по школам и предметам (% правильных ответов)</h2>
-        <canvas id="summaryChart"></canvas>
-    </div>
-
-    {# --- БЛОК С ДЕТАЛЬНОЙ ТАБЛИЦЕЙ --- #}
-    <div class="bg-white shadow-md rounded-lg overflow-x-auto">
-        <h2 class="text-xl font-bold text-gray-800 p-6">Детальный анализ по вопросам</h2>
-        <table class="min-w-full divide-y divide-gray-200 border-t">
-            <thead class="bg-gray-50">
-                <tr>
-                    <th rowspan="2" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase border-r align-middle">Предмет</th>
-                    <th rowspan="2" class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase border-r align-middle">Вопрос №</th>
-                    {% for school_id, data in analysis_data.items %}
-                        <th colspan="2" class="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase border-r">{{ data.school_name }}</th>
-                    {% endfor %}
-                </tr>
-                <tr>
-                    {% for school_id, data in analysis_data.items %}
-                        <th class="px-2 py-2 text-center text-xs font-medium text-gray-500 border-l">% Верно</th>
-                        <th class="px-2 py-2 text-center text-xs font-medium text-gray-500 border-r">Кол-во</th>
-                    {% endfor %}
-                </tr>
-            </thead>
-            <tbody class="bg-white divide-y divide-gray-200">
-                {% for subject_name in unique_subject_names %}
-                    {% if first_school_data %}
-                        {% with question_details_dict=first_school_data.subjects|get_item:subject_name|get_item:'question_details' %}
-                            {% for q_num, q_data in question_details_dict.items %}
-                            <tr class="hover:bg-gray-50">
-                                {% if forloop.first %}
-                                    <td rowspan="{% if question_details_dict|length > 0 %}{{ question_details_dict|length }}{% else %}1{% endif %}" class="px-4 py-4 font-medium border-r align-top">{{ subject_name }}</td>
-                                {% endif %}
-                                <td class="px-4 py-4 text-center border-r">{{ q_num }}</td>
-                                {% for school_id, school_data in analysis_data.items %}
-                                    {% with question_stats=school_data.subjects|get_item:subject_name|get_item:'question_details'|get_item:q_num %}
-                                        {% if question_stats %}
-                                            <td class="px-2 py-4 text-center border-l {% if question_stats.percentage >= 80 %}bg-green-50{% elif question_stats.percentage < 40 %}bg-red-50{% endif %}">
-                                                {{ question_stats.percentage }}%
-                                            </td>
-                                            <td class="px-2 py-4 text-center text-xs text-gray-500 border-r">
-                                                {{ question_stats.correct }}/{{ question_stats.total }}
-                                            </td>
-                                        {% else %}
-                                            <td class="px-2 py-4 text-center text-gray-400 border-l">—</td>
-                                            <td class="px-2 py-4 text-center text-xs text-gray-400 border-r">0/0</td>
-                                        {% endif %}
-                                    {% endwith %}
-                                {% endfor %}
-                            </tr>
-                            {% empty %}
-                                <tr class="hover:bg-gray-50">
-                                    <td class="px-4 py-4 font-medium border-r align-top">{{ subject_name }}</td>
-                                    <td class="px-4 py-4 text-center border-r">-</td>
-                                    {% for school_id, school_data in analysis_data.items %}
-                                        <td class="px-2 py-4 text-center text-gray-400 border-l">—</td>
-                                        <td class="px-2 py-4 text-center text-xs text-gray-400 border-r">0/0</td>
-                                    {% endfor %}
-                                </tr>
+        
+        <form method="get" id="analysis-form" 
+              data-dynamic-options-url="{% url 'api_load_subjects_and_classes' %}">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div class="flex flex-col gap-6">
+                    <div class="filter-card" data-filter="quarters">
+                        <label class="font-bold text-gray-700 text-lg">{{ form.quarters.label_tag }}</label>
+                        <div class="chip-container">
+                            {% for value, text in form.quarters.field.choices %}
+                                <label class="chip"><input type="checkbox" name="quarters" value="{{ value }}"><span>{{ text }}</span></label>
                             {% endfor %}
-                        {% endwith %}
-                    {% endif %}
-                {% endfor %}
-            </tbody>
-        </table>
+                        </div>
+                    </div>
+                    <div class="filter-card" data-filter="test_numbers">
+                        <label class="font-bold text-gray-700 text-lg">{{ form.test_numbers.label_tag }}</label>
+                        <div class="chip-container">
+                            {% for value, text in form.test_numbers.field.choices %}
+                                <label class="chip"><input type="checkbox" name="test_numbers" value="{{ value }}"><span>{{ text }}</span></label>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+                <div class="flex flex-col gap-6">
+                    <div class="filter-card" data-filter="schools">
+                        <label class="font-bold text-gray-700 text-lg">{{ form.schools.label_tag }}</label>
+                        <div class="chip-container">
+                            {% for value, text in form.schools.field.choices %}
+                                <label class="chip"><input type="checkbox" name="schools" value="{{ value }}"><span>{{ text }}</span></label>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    <div class="filter-card" data-filter="school_classes">
+                        <label class="font-bold text-gray-700 text-lg">{{ form.school_classes.label_tag }}</label>
+                        <input type="text" class="filter-search" placeholder="Поиск по классам...">
+                        <div class="chip-container"></div>
+                    </div>
+                </div>
+                <div class="flex flex-col gap-6">
+                    <div class="filter-card" data-filter="subjects">
+                        <label class="font-bold text-gray-700 text-lg">{{ form.subjects.label_tag }}</label>
+                        <input type="text" class="filter-search" placeholder="Поиск по предметам...">
+                        <div class="chip-container"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="mt-8 border-t pt-6 flex justify-end">
+                <button type="submit" class="btn btn-primary px-10 py-3 text-lg">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                    </svg>
+                    Сравнить данные
+                </button>
+            </div>
+        </form>
     </div>
-{% elif request.GET %}
-    <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-lg shadow">
-        <p class="text-yellow-800">Нет данных для отображения. Пожалуйста, выберите другие фильтры и нажмите "Сравнить".</p>
+
+    {% if has_results %}
+    <div class="glass-card p-6 rounded-2xl">
+        <div class="tabs">
+            <button class="tab-button active" data-tab="summary">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z" />
+                </svg>
+                Сводка
+            </button>
+            <button class="tab-button" data-tab="heatmap">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M12 1.586l-4 4v12.828l4-4V1.586zM3.707 3.293A1 1 0 002 4v10a1 1 0 00.293.707L6 18.414V5.586L3.707 3.293zM17.707 5.293A1 1 0 0118 6v10a1 1 0 01-.293.707L14 14.586V3.586l3.707 1.707z" clip-rule="evenodd" />
+                </svg>
+                Анализ по вопросам
+            </button>
+            {% if trend_chart_data %}
+            <button class="tab-button" data-tab="trends">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M12 7a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0V8.414l-4.293 4.293a1 1 0 01-1.414 0L8 10.414l-4.293 4.293a1 1 0 01-1.414-1.414l5-5a1 1 0 011.414 0L11 10.586 14.586 7H12z" clip-rule="evenodd" />
+                </svg>
+                Динамика
+            </button>
+            {% endif %}
+            <button class="tab-button" data-tab="insights">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+                </svg>
+                Инсайты
+            </button>
+        </div>
+
+        <div id="summary" class="tab-content active">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div class="bg-white p-6 rounded-2xl shadow-md">
+                    <h3 class="text-xl font-bold text-gray-800 mb-4">Сравнение школ по предметам</h3>
+                    <canvas id="schoolsComparisonChart" 
+                            data-chart-data='{{ radar_chart_data|safe }}'></canvas>
+                </div>
+                <div class="bg-white p-6 rounded-2xl shadow-md">
+                    <h3 class="text-xl font-bold text-gray-800 mb-4">Общая успеваемость (в среднем)</h3>
+                    <canvas id="overallPerformanceChart" 
+                            data-chart-data='{{ summary_chart_data|safe }}'></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div id="heatmap" class="tab-content">
+    {% for subject, data in heatmap_data.items %}
+        <div class="mb-10 bg-white p-6 rounded-2xl shadow-md">
+            <h3 class="text-xl font-bold text-gray-800 mb-4">{{ subject }}</h3>
+            <div class="overflow-x-auto rounded-xl shadow-sm">
+                <table class="heatmap-table">
+                    <thead>
+                        <tr>
+                            <th class="rounded-tl-xl">Школа/Вопрос</th>
+                            {% for q_num in data.questions %}<th>{{ q_num }}</th>{% endfor %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for school_name, questions_data in data.schools.items %}
+                        <tr>
+                            <td class="font-semibold text-left p-3 bg-gray-50">{{ school_name }}</td>
+                            {% for q_num in data.questions %}
+                                {% with cell_data=questions_data|get_item:q_num|default:None %}
+                                    <td title="Правильно: {{ cell_data.correct }}/{{ cell_data.total }} ({{ cell_data.percentage }}%)" 
+                                        style="background-color: {% with p_val=cell_data.percentage|default:-1 %}{% if p_val >= 80 %}#dcfce7{% elif p_val >= 50 %}#fef9c3{% elif p_val >= 0 %}#fee2e2{% else %}#f3f4f6{% endif %}{% endwith %}; padding: 0.5rem;">
+                                        
+                                        {% if cell_data is not None %}
+                                            <div class="flex flex-col items-center leading-tight">
+                                                <span class="font-bold text-base">{{ cell_data.percentage }}%</span>
+                                                <span class="text-xs text-gray-500 mt-1">{{ cell_data.correct }}/{{ cell_data.total }}</span>
+                                            </div>
+                                        {% else %}
+                                            —
+                                        {% endif %}
+                                    </td>
+                                {% endwith %}
+                            {% endfor %}
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            {# --- НОВЫЙ БЛОК С ИТОГАМИ --- #}
+            {% with summary=heatmap_summary|get_item:subject %}
+                {% if summary %}
+                <div class="mt-6 p-4 bg-gray-50 rounded-lg border">
+                    <h4 class="font-bold text-lg mb-3 text-gray-700">Итоги по предмету: {{ subject }}</h4>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <h5 class="font-semibold mb-2">Рейтинг школ:</h5>
+                            <ul class="space-y-2">
+                                {% for school_stat in summary.ranking %}
+                                <li class="flex justify-between items-center p-2 rounded-md {% if forloop.first %}bg-green-100 border border-green-200{% elif forloop.last and summary.ranking|length > 1 %}bg-red-100 border border-red-200{% else %}bg-gray-100{% endif %}">
+                                    <span>
+                                        <span class="font-bold mr-2">{{ forloop.counter }}.</span>
+                                        {{ school_stat.school }}
+                                    </span>
+                                    <span class="font-bold text-lg">{{ school_stat.avg }}%</span>
+                                </li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                        {% if summary.ranking %}
+                        <div>
+                            <h5 class="font-semibold mb-2">Ключевые выводы:</h5>
+                            <ul class="list-disc list-inside space-y-2 text-gray-600">
+                                <li>Средний процент по всем школам: <strong class="text-gray-800">{{ summary.overall_avg }}%</strong>.</li>
+                                {% if summary.ranking|length > 1 %}
+                                    {% with leader=summary.ranking.0 outsider=summary.ranking|last %}
+                                        <li>
+                                            Лидер <strong class="text-green-600">{{ leader.school }}</strong> опережает <strong class="text-red-600">{{ outsider.school }}</strong> на 
+                                            <strong class="text-indigo-600">{{ summary.difference }}%</strong>.
+                                        </li>
+                                    {% endwith %}
+                                {% endif %}
+                                {% if summary.easiest %}
+                                <li>Самый легкий вопрос: <strong>№{{ summary.easiest.0.q_num }}</strong> ({{ summary.easiest.0.percentage }}% верных ответов).</li>
+                                {% endif %}
+                                {% if summary.hardest %}
+                                <li>Самый сложный вопрос: <strong>№{{ summary.hardest.0.q_num }}</strong> ({{ summary.hardest.0.percentage }}% верных ответов).</li>
+                                {% endif %}
+                            </ul>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
+            {% endwith %}
+        </div>
+    {% endfor %}
     </div>
-{% endif %}
 
-
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script>
-    document.addEventListener('DOMContentLoaded', function () {
-        // --- КОД ДЛЯ ГРАФИКА ---
-        {% if has_results and chart_data %}
-            try {
-                const ctx = document.getElementById('summaryChart').getContext('2d');
-                const chartDataFromServer = JSON.parse('{{ chart_data|safe }}');
-                const getRandomColor = () => {
-                    const r = Math.floor(Math.random() * 200);
-                    const g = Math.floor(Math.random() * 200);
-                    const b = Math.floor(Math.random() * 200);
-                    return `rgba(${r}, ${g}, ${b}, 0.6)`;
-                };
-                chartDataFromServer.datasets.forEach(dataset => {
-                    const color = getRandomColor();
-                    dataset.backgroundColor = color;
-                    dataset.borderColor = color.replace('0.6', '1');
-                    dataset.borderWidth = 1;
-                });
-                new Chart(ctx, {
-                    type: 'bar',
-                    data: {
-                        labels: chartDataFromServer.labels,
-                        datasets: chartDataFromServer.datasets
-                    },
-                    options: {
-                        responsive: true,
-                        plugins: { legend: { position: 'top', }, title: { display: false, } },
-                        scales: { y: { beginAtZero: true, max: 100, ticks: { callback: function(value) { return value + '%' } } } }
-                    }
-                });
-            } catch (e) {
-                console.error("Ошибка при отрисовке графика:", e);
-            }
+        {% if trend_chart_data %}
+        <div id="trends" class="tab-content">
+            <div class="bg-white p-6 rounded-2xl shadow-md">
+                <h3 class="text-xl font-bold text-gray-800 mb-4">Динамика успеваемости по четвертям</h3>
+                <canvas id="trendChart" 
+                        data-chart-data='{{ trend_chart_data|safe }}'></canvas>
+            </div>
+        </div>
         {% endif %}
 
-        // --- КОД ДЛЯ ДИНАМИЧЕСКИХ ФИЛЬТРОВ ---
-        const schoolsSelect = document.getElementById('id_schools');
-        const classesSelect = document.getElementById('id_school_classes');
-        const subjectsSelect = document.getElementById('id_subjects');
-    
-        schoolsSelect.addEventListener('change', function () {
-            const selectedSchoolIds = Array.from(schoolsSelect.selectedOptions).map(option => option.value);
-            classesSelect.innerHTML = '<option>Загрузка...</option>';
-            subjectsSelect.innerHTML = '<option>Загрузка...</option>';
-            if (selectedSchoolIds.length === 0) {
-                classesSelect.innerHTML = '';
-                subjectsSelect.innerHTML = '';
-                return;
-            }
-            const url = `{% url 'api_load_subjects_and_classes' %}?${selectedSchoolIds.map(id => `school_ids[]=${id}`).join('&')}`;
-            fetch(url)
-                .then(response => response.json())
-                .then(data => {
-                    classesSelect.innerHTML = '';
-                    data.classes.forEach(c => {
-                        const option = new Option(c.name, c.id);
-                        classesSelect.add(option);
-                    });
-                    subjectsSelect.innerHTML = '';
-                    data.subjects.forEach(s => {
-                        const option = new Option(s.name, s.id);
-                        subjectsSelect.add(option);
-                    });
-                });
-        });
-    });
-</script>
+        <div id="insights" class="tab-content">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div class="insight-card">
+                    <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        </svg>
+                        Топ-3 самых сложных вопроса
+                    </h3>
+                    {% for subject, questions in problematic_questions.items %}
+                        <div class="mb-4">
+                            <h4 class="font-semibold text-md text-gray-700 mb-2">{{ subject }}</h4>
+                            <ul class="space-y-2">
+                                {% for q in questions %}
+                                    <li class="flex justify-between items-center p-2 bg-red-50 rounded-lg">
+                                        <span class="font-medium">Вопрос №{{ q.q }}</span>
+                                        <span class="bg-red-100 text-red-800 px-2 py-1 rounded-full text-sm font-bold">{{ q.p }}%</span>
+                                        <span class="text-gray-500 text-sm">{{ q.school }}</span>
+                                    </li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    {% empty %}
+                        <p class="text-gray-500">Не удалось определить проблемные вопросы.</p>
+                    {% endfor %}
+                </div>
+                <div class="insight-card">
+                    <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-yellow-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        Ученики в группе риска (&lt;40%)
+                    </h3>
+                    {% if at_risk_students %}
+                    <div class="space-y-3 max-h-96 overflow-y-auto pr-2">
+                        {% for student in at_risk_students %}
+                        <div class="risk-student-card">
+                            <div class="flex justify-between items-center">
+                                <div>
+                                    <span class="font-bold text-gray-800">{{ student.name }}</span>
+                                    <span class="text-gray-600 text-sm ml-2">({{ student.class }})</span>
+                                </div>
+                                <span class="text-red-600 font-bold">{{ student.score }}%</span>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                        <div class="bg-green-50 p-4 rounded-lg text-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 text-green-500 mx-auto mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <p class="text-green-700 font-medium">Ученики в группе риска не найдены. Отличная работа!</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% elif request.GET %}
+        <div class="bg-yellow-50 border-l-4 border-yellow-400 p-6 rounded-2xl shadow-md flex items-start gap-4">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-yellow-600 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            <div>
+                <h3 class="font-bold text-yellow-800">Данные не найдены</h3>
+                <p class="text-yellow-700">Нет данных для отображения. Пожалуйста, выберите другие фильтры и нажмите "Сравнить".</p>
+            </div>
+        </div>
+    {% endif %}
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js" defer></script>
+<script src="{% static 'js/deep_analysis.js' %}" defer></script>
 
 {% endblock %}

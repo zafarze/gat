@@ -5,36 +5,39 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}GAT Report{% endblock %}</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    
+    {# --- ИСПРАВЛЕНИЕ: УДАЛЕН СКРИПТ CDN И ДОБАВЛЕНА ССЫЛКА НА ЛОКАЛЬНЫЙ CSS --- #}
+    <link href="{% static 'css/style.css' %}" rel="stylesheet">
+    
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <style>
         [x-cloak] { display: none !important; }
     </style>
+
+    {# --- ИСПРАВЛЕНИЕ: ДОБАВЛЕН БЛОК ДЛЯ СТИЛЕЙ ДОЧЕРНИХ ШАБЛОНОВ --- #}
+    {% block head %}{% endblock %}
 </head>
 <body class="bg-gray-100">
 
 <div x-data="{ isSidebarOpen: false, sidebarCollapsed: false }" class="flex h-screen bg-gray-100">
 
+    {# Мобильная боковая панель #}
     <div x-show="isSidebarOpen" class="fixed inset-0 flex z-40 md:hidden" x-cloak>
-        <div @click="isSidebarOpen = false" x-show="isSidebarOpen"
+        <div @click="isSidebarOpen = false" class="fixed inset-0 bg-gray-600 bg-opacity-75"
              x-transition:enter="transition-opacity ease-linear duration-300"
              x-transition:enter-start="opacity-0"
              x-transition:enter-end="opacity-100"
              x-transition:leave="transition-opacity ease-linear duration-300"
              x-transition:leave-start="opacity-100"
-             x-transition:leave-end="opacity-0"
-             class="fixed inset-0">
-            <div class="absolute inset-0 bg-gray-600 opacity-75"></div>
-        </div>
+             x-transition:leave-end="opacity-0"></div>
 
-        <div x-show="isSidebarOpen"
+        <div class="relative flex-1 flex flex-col max-w-xs w-full bg-gray-800"
              x-transition:enter="transition ease-in-out duration-300 transform"
              x-transition:enter-start="-translate-x-full"
              x-transition:enter-end="translate-x-0"
              x-transition:leave="transition ease-in-out duration-300 transform"
              x-transition:leave-start="translate-x-0"
-             x-transition:leave-end="-translate-x-full"
-             class="relative flex flex-col w-9/10 bg-gray-800"> {# <-- ИСПРАВЛЕНИЕ ЗДЕСЬ: убран класс flex-1 #}
+             x-transition:leave-end="-translate-x-full">
             
             <div class="absolute top-0 right-0 -mr-12 pt-2">
                 <button @click="isSidebarOpen = false" type="button" class="ml-1 flex items-center justify-center h-10 w-10 rounded-full focus:outline-none focus:ring-2 focus:ring-inset focus:ring-white">
@@ -47,6 +50,7 @@
         </div>
     </div>
 
+    {# Десктопная боковая панель #}
     <div class="hidden md:flex md:flex-shrink-0">
         <div class="flex flex-col transition-all duration-300" :class="{'w-64': !sidebarCollapsed, 'w-20': sidebarCollapsed}">
             {% include 'components/sidebar.html' %}
@@ -74,6 +78,9 @@
         </main>
     </div>
 </div>
+
+<script src="https://unpkg.com/htmx.org@1.9.10"></script>
+{% block scripts %}{% endblock %}
 
 </body>
 </html>

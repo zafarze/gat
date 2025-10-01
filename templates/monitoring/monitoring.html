@@ -1,0 +1,332 @@
+{% extends "base.html" %}
+{% load static custom_filters %}
+
+{% block head %}
+{# Подключаем стили для "чипов" и новой библиотеки TomSelect #}
+<link rel="stylesheet" href="{% static 'css/deep_analysis.css' %}">
+<link href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.css" rel="stylesheet">
+<style>
+    /* Стили для TomSelect, чтобы он соответствовал вашему дизайну */
+    .ts-control {
+        border-radius: 0.5rem !important;
+        border: 1px solid #d1d5db !important;
+        padding: 0.5rem 0.75rem !important;
+    }
+    .ts-dropdown {
+        border-radius: 0.5rem !important;
+        border: 1px solid #d1d5db !important;
+    }
+    .ts-control .item {
+        background-color: #4f46e5 !important;
+        color: white !important;
+        border-radius: 0.375rem !important;
+        padding: 0.25rem 0.5rem !important;
+    }
+</style>
+{% endblock %}
+
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+    <div class="flex justify-between items-center">
+        <h1 id="monitoring-title" class="text-3xl font-bold text-gray-800">Мониторинг</h1>
+        <div id="lang-switcher" class="flex items-center space-x-2">
+            <button onclick="changeLanguage('tj')" class="px-3 py-1 text-sm border rounded-md hover:bg-gray-100">TJ</button>
+            <button onclick="changeLanguage('ru')" class="px-3 py-1 text-sm border rounded-md hover:bg-gray-100 bg-gray-200 font-bold">RU</button>
+            <button onclick="changeLanguage('en')" class="px-3 py-1 text-sm border rounded-md hover:bg-gray-100">EN</button>
+        </div>
+    </div>
+    
+    <div class="glass-card p-6 rounded-2xl">
+        <h2 id="monitoring-subtitle" class="text-2xl font-bold text-gray-800 mb-6">Используйте фильтры для поиска и анализа данных</h2>
+        <form method="get" action="">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                
+                <div class="filter-card">
+                    <label id="label-academic-year" class="font-bold text-gray-700 text-lg mb-2 block">{{ form.academic_year.label }}</label>
+                    {{ form.academic_year }}
+                </div>
+
+                <div class="filter-card">
+                    <label id="label-quarter" class="font-bold text-gray-700 text-lg mb-2 block">{{ form.quarter.label }}</label>
+                    {{ form.quarter }}
+                </div>
+
+                <div class="filter-card">
+                    <label id="label-schools" class="font-bold text-gray-700 text-lg mb-2 block">{{ form.schools.label }}</label>
+                    {{ form.schools }}
+                </div>
+
+                <div class="filter-card">
+                    <label id="label-classes" class="font-bold text-gray-700 text-lg mb-2 block">{{ form.school_classes.label }}</label>
+                    {{ form.school_classes }}
+                </div>
+
+                <div class="filter-card">
+                    <label id="label-subjects" class="font-bold text-gray-700 text-lg mb-2 block">{{ form.subjects.label }}</label>
+                    {{ form.subjects }}
+                </div>
+                
+                 <div class="filter-card" data-filter="test_numbers">
+                    <label id="label-tests" class="font-bold text-gray-700 text-lg">{{ form.gat_tests.label }}</label>
+                    <div class="chip-container">
+                        {% for choice in form.gat_tests %}
+                            <label class="chip">{{ choice.tag }}<span>{{ choice.choice_label }}</span></label>
+                        {% endfor %}
+                    </div>
+                </div>
+
+            </div>
+            <div class="mt-8 border-t border-gray-200 pt-6 flex justify-end space-x-4">
+                <a id="btn-reset" href="{% url 'monitoring' %}" class="btn btn-secondary px-8 py-2.5 text-md">Сбросить</a>
+                <button id="btn-apply" type="submit" class="btn btn-primary px-10 py-3 text-lg">Применить</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% if has_results %}
+    <div class="mt-8">
+        {% if table_rows %}
+            <div id="table-wrapper" class="bg-white shadow-md rounded-lg overflow-x-auto">
+                <div class="p-4 border-b flex justify-between items-center action-buttons">
+                    <h2 class="text-lg font-semibold"><span id="students-found-text">Найдено студентов</span>: {{ table_rows|length }}</h2>
+                    <div class="flex items-center gap-2">
+                        <button onclick="window.print()" class="flex items-center gap-2 bg-gray-100 text-gray-700 px-3 py-1.5 rounded-md hover:bg-gray-200 text-xs font-medium">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
+                            <span id="btn-print">Печать</span>
+                        </button>
+                        <a href="{% url 'export_monitoring_excel' %}?{{ request.GET.urlencode }}" class="flex items-center gap-2 bg-green-100 text-green-800 px-3 py-1.5 rounded-md hover:bg-green-200 text-xs font-medium">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                            <span id="btn-excel">Excel</span>
+                        </a>
+                        <a href="{% url 'export_monitoring_pdf' %}?{{ request.GET.urlencode }}" class="flex items-center gap-2 bg-red-100 text-red-700 px-3 py-1.5 rounded-md hover:bg-red-200 text-xs font-medium">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                            <span id="btn-pdf">PDF</span>
+                        </a>
+                    </div>
+                </div>
+                
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th id="th-number" rowspan="2" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase align-middle">№</th>
+                            <th id="th-student-name" rowspan="2" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase align-middle">ФИО Студента</th>
+                            <th id="th-class" rowspan="2" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase align-middle">Класс</th>
+                            <th id="th-test" rowspan="2" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase align-middle">Тест</th>
+                            {% for header in table_headers %}
+                                <th class="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase border-l">{{ header.subject.abbreviation|default:header.subject.name }}</th>
+                            {% endfor %}
+                            <th id="th-total-score" rowspan="2" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase border-l align-middle">Общий балл</th>
+                        </tr>
+                        <tr>
+                            {% for header in table_headers %}
+                                <th class="py-2 px-4 text-center text-xs font-normal text-gray-400 border-l">({{ header.q_count }} савол)</th>
+                            {% endfor %}
+                        </tr>
+                    </thead>
+                    <tbody id="monitoring-table-body" class="bg-white divide-y divide-gray-200">
+                        {% for row in table_rows %}
+                        <tr data-href="{% url 'student_progress' row.student.id %}" class="hover:bg-gray-50 cursor-pointer">
+                            <td class="px-4 py-4 text-sm text-gray-500">{{ forloop.counter }}</td>
+                            
+                            <td class="px-4 py-4 text-sm font-medium text-gray-900">
+                                <span class="student-name lang-ru">{{ row.student.last_name_ru }} {{ row.student.first_name_ru }}</span>
+                                <span class="student-name lang-tj hidden">{{ row.student.last_name_tj }} {{ row.student.first_name_tj }}</span>
+                                <span class="student-name lang-en hidden">{{ row.student.last_name_en }} {{ row.student.first_name_en }}</span>
+                            </td>
+
+                            <td class="px-4 py-4 text-sm text-gray-500">{{ row.student.school_class.name }}</td>
+                            <td class="px-4 py-4 text-sm text-gray-500">
+                                {% if row.is_total %}
+                                    <span class="font-bold text-green-600">GAT Total</span>
+                                {% else %}
+                                    {{ row.result_obj.gat_test.name }}
+                                {% endif %}
+                            </td>
+                            {% for header in table_headers %}
+                                <td class="px-4 py-4 text-center text-sm font-semibold">
+                                    {{ row.scores_by_subject|get_item:header.subject.id|default:"—" }}
+                                </td>
+                            {% endfor %}
+                            <td class="px-4 py-4 text-sm font-bold text-indigo-600">{{ row.total_score }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-md shadow">
+                <p class="text-sm text-yellow-700">По вашему запросу ничего не найдено. Попробуйте изменить параметры фильтра.</p>
+            </div>
+        {% endif %}
+    </div>
+{% endif %}
+{% endblock content %}
+
+
+{% block scripts %}
+    <style>
+        /* Стили для печати остаются без изменений */
+        @media print {
+            body { background-color: white !important; }
+            aside, header, .action-buttons, .no-print, form, .glass-card { display: none !important; }
+            main { padding: 0 !important; margin: 0 !important; }
+            #table-wrapper {
+                overflow: visible !important; height: auto !important;
+                max-height: none !important; box-shadow: none !important;
+                border: none !important;
+            }
+        }
+    </style>
+    
+    <script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
+    
+    <script>
+        // --- ЛОГИКА ПЕРЕКЛЮЧЕНИЯ ЯЗЫКОВ (без изменений) ---
+        const translations = {
+            ru: {
+                monitoringTitle: 'Мониторинг', monitoringSubtitle: 'Используйте фильтры для поиска и анализа данных',
+                labelAcademicYear: 'Учебный год', labelQuarter: 'Четверть', labelSchools: 'Школы', labelClasses: 'Классы',
+                labelSubjects: 'Предметы', labelTests: 'Тесты', btnReset: 'Сбросить', btnApply: 'Применить',
+                studentsFoundText: 'Найдено студентов', btnPrint: 'Печать', btnExcel: 'Excel', btnPdf: 'PDF',
+                thNumber: '№', thStudentName: 'ФИО Студента', thClass: 'Класс', thTest: 'Тест', thTotalScore: 'Общий балл'
+            },
+            tj: {
+                monitoringTitle: 'Мониторинг', monitoringSubtitle: 'Филтрҳоро барои ҷустуҷӯ ва таҳлили маълумот истифода баред',
+                labelAcademicYear: 'Соли таҳсил', labelQuarter: 'Чоряк', labelSchools: 'Мактабҳо', labelClasses: 'Синфҳо',
+                labelSubjects: 'Фанҳо', labelTests: 'Санҷишҳо', btnReset: 'Тоза кардан', btnApply: 'Татбиқ кардан',
+                studentsFoundText: 'Донишҷӯён ёфт шуд', btnPrint: 'Чоп', btnExcel: 'Excel', btnPdf: 'PDF',
+                thNumber: '№', thStudentName: 'Номи донишҷӯ', thClass: 'Синф', thTest: 'Санҷиш', thTotalScore: 'Холи умумӣ'
+            },
+            en: {
+                monitoringTitle: 'Monitoring', monitoringSubtitle: 'Use filters to search and analyze data',
+                labelAcademicYear: 'Academic Year', labelQuarter: 'Quarter', labelSchools: 'Schools',
+                labelClasses: 'Classes', labelSubjects: 'Subjects', labelTests: 'Tests',
+                btnReset: 'Reset', btnApply: 'Apply', studentsFoundText: 'Students found',
+                btnPrint: 'Print', btnExcel: 'Excel', btnPdf: 'PDF', thNumber: '#',
+                thStudentName: 'Student Name', thClass: 'Class', thTest: 'Test', thTotalScore: 'Total Score'
+            }
+        };
+        function changeLanguage(lang) {
+            const langData = translations[lang]; if (!langData) return;
+            document.getElementById('monitoring-title').innerText = langData.monitoringTitle;
+            document.getElementById('monitoring-subtitle').innerText = langData.monitoringSubtitle;
+            document.getElementById('label-academic-year').innerText = langData.labelAcademicYear;
+            document.getElementById('label-quarter').innerText = langData.labelQuarter;
+            document.getElementById('label-schools').innerText = langData.labelSchools;
+            document.getElementById('label-classes').innerText = langData.labelClasses;
+            document.getElementById('label-subjects').innerText = langData.labelSubjects;
+            document.getElementById('label-tests').innerText = langData.labelTests;
+            document.getElementById('btn-reset').innerText = langData.btnReset;
+            document.getElementById('btn-apply').innerText = langData.btnApply;
+            const studentsFoundTextEl = document.getElementById('students-found-text');
+            if (studentsFoundTextEl) {
+                studentsFoundTextEl.innerText = langData.studentsFoundText;
+                document.getElementById('btn-print').innerText = langData.btnPrint;
+                document.getElementById('btn-excel').innerText = langData.btnExcel;
+                document.getElementById('btn-pdf').innerText = langData.btnPdf;
+                document.getElementById('th-number').innerText = langData.thNumber;
+                document.getElementById('th-student-name').innerText = langData.thStudentName;
+                document.getElementById('th-class').innerText = langData.thClass;
+                document.getElementById('th-test').innerText = langData.thTest;
+                document.getElementById('th-total-score').innerText = langData.thTotalScore;
+            }
+            document.querySelectorAll('.student-name').forEach(span => {
+                span.classList.add('hidden');
+                if (span.classList.contains('lang-' + lang)) { span.classList.remove('hidden'); }
+            });
+            document.querySelectorAll('#lang-switcher button').forEach(button => {
+                button.classList.remove('bg-gray-200', 'font-bold');
+                if (button.innerText.toLowerCase() === lang) { button.classList.add('bg-gray-200', 'font-bold'); }
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            
+            // --- НОВЫЙ СКРИПТ ДЛЯ ИНИЦИАЛИЗАЦИИ TomSelect ---
+            new TomSelect('#id_academic_year', { placeholder: 'Выберите год...', allowEmptyOption: true });
+            new TomSelect('#id_quarter', { placeholder: 'Сначала выберите год...', allowEmptyOption: true });
+            new TomSelect('#id_schools', { placeholder: 'Выберите одну или несколько школ...', plugins: ['remove_button'] });
+            new TomSelect('#id_school_classes', { placeholder: 'Сначала выберите школу...', plugins: ['remove_button'] });
+            new TomSelect('#id_subjects', { placeholder: 'Сначала выберите школу...', plugins: ['remove_button'] });
+            
+            // --- СТАРЫЙ РАБОЧИЙ КОД ДЛЯ ДИНАМИЧЕСКИХ ФИЛЬТРОВ (без изменений) ---
+            const tableBody = document.getElementById('monitoring-table-body');
+            if(tableBody) {
+                tableBody.addEventListener('click', function(event) {
+                    const row = event.target.closest('tr[data-href]');
+                    if (row) { window.location.href = row.dataset.href; }
+                });
+            }
+            
+            const yearSelect = document.querySelector('#id_academic_year');
+            const quarterSelect = document.querySelector('#id_quarter').tomselect;
+            const schoolsSelect = document.querySelector('#id_schools');
+            const classesSelect = document.querySelector('#id_school_classes').tomselect;
+            const subjectsSelect = document.querySelector('#id_subjects').tomselect;
+    
+            async function loadOptions(url, tomSelectInstance, placeholder) {
+                tomSelectInstance.disable();
+                tomSelectInstance.clear();
+                tomSelectInstance.clearOptions();
+                tomSelectInstance.settings.placeholder = placeholder;
+                tomSelectInstance.inputState(); // Обновить placeholder
+                try {
+                    const response = await fetch(url);
+                    if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+                    const html = await response.text();
+                    const tempDiv = document.createElement('div');
+                    tempDiv.innerHTML = html;
+                    const options = Array.from(tempDiv.querySelectorAll('option'));
+                    tomSelectInstance.addOptions(options.map(opt => ({value: opt.value, text: opt.text})));
+                    tomSelectInstance.enable();
+                } catch (error) {
+                    console.error('Fetch error:', error);
+                    tomSelectInstance.settings.placeholder = 'Ошибка загрузки';
+                    tomSelectInstance.inputState();
+                }
+            }
+    
+            if (yearSelect) {
+                yearSelect.addEventListener('change', function () {
+                    if (this.value) {
+                        const url = `{% url 'api_load_quarters' %}?year_id=${this.value}`;
+                        loadOptions(url, quarterSelect, 'Загрузка...');
+                    } else {
+                        quarterSelect.disable();
+                        quarterSelect.clear();
+                        quarterSelect.settings.placeholder = 'Сначала выберите год';
+                        quarterSelect.inputState();
+                    }
+                });
+            }
+    
+            if (schoolsSelect) {
+                schoolsSelect.addEventListener('change', function () {
+                    const selectedSchoolIds = Array.from(this.selectedOptions).map(option => option.value);
+                    if (selectedSchoolIds.length > 0) {
+                        const params = new URLSearchParams();
+                        selectedSchoolIds.forEach(id => params.append('school_ids[]', id));
+                        
+                        const classesUrl = `{% url 'api_load_classes' %}?${params.toString()}`;
+                        const subjectsUrl = `{% url 'api_load_subjects' %}?${params.toString()}`;
+                        
+                        loadOptions(classesUrl, classesSelect, 'Загрузка классов...');
+                        loadOptions(subjectsUrl, subjectsSelect, 'Загрузка предметов...');
+                    } else {
+                        classesSelect.disable();
+                        classesSelect.clear();
+                        classesSelect.settings.placeholder = 'Сначала выберите школу';
+                        classesSelect.inputState();
+
+                        subjectsSelect.disable();
+                        subjectsSelect.clear();
+                        subjectsSelect.settings.placeholder = 'Сначала выберите школу';
+                        subjectsSelect.inputState();
+                    }
+                });
+            }
+        });
+    </script>
+{% endblock scripts %}

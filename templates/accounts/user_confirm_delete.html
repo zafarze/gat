@@ -1,0 +1,13 @@
+{% extends 'base.html' %}
+{% block content %}
+<h1 class="text-3xl font-bold text-gray-800 mb-6">{{ title }}</h1>
+<div class="bg-white p-8 rounded-lg shadow-md max-w-xl mx-auto">
+    <p class="text-lg">Вы уверены, что хотите удалить пользователя <strong>"{{ object.get_full_name|default:object.username }}"</strong>?</p>
+    <p class="text-gray-600 mt-2">Это действие нельзя будет отменить.</p>
+    <form method="post" class="mt-6 flex justify-end space-x-3">
+        {% csrf_token %}
+        <a href="{% url 'user_list' %}" class="bg-gray-200 text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-300">Отмена</a>
+        <button type="submit" class="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700">Да, удалить</button>
+    </form>
+</div>
+{% endblock %}

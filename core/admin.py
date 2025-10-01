@@ -18,17 +18,18 @@ class SchoolClassAdmin(admin.ModelAdmin):
     inlines = [ClassSubjectInline]
     ordering = ('name',)
 
+# --- ИЗМЕНЕННЫЙ БЛОК ДЛЯ СТУДЕНТОВ ---
 @admin.register(Student)
 class StudentAdmin(admin.ModelAdmin):
-    list_display = ('student_id', 'last_name', 'first_name', 'school_class')
+    # Используем новые поля с окончанием _ru
+    list_display = ('student_id', 'last_name_ru', 'first_name_ru', 'school_class')
     list_filter = ('school_class__school', 'school_class')
-    search_fields = ('last_name', 'first_name', 'student_id')
-    ordering = ('school_class', 'last_name', 'first_name')
-    # Ускоряем загрузку страницы, подгружая связанные объекты одним запросом
+    search_fields = ('last_name_ru', 'first_name_ru', 'student_id')
+    ordering = ('school_class', 'last_name_ru', 'first_name_ru')
     list_select_related = ('school_class', 'school_class__school')
 
-# --- Остальные модели ---
-# (здесь код не менялся, но приведен для полноты)
+# --- Остальные модели (без изменений) ---
+
 @admin.register(AcademicYear)
 class AcademicYearAdmin(admin.ModelAdmin):
     list_display = ('name', 'start_date', 'end_date')
@@ -41,11 +42,10 @@ class SchoolAdmin(admin.ModelAdmin):
 
 @admin.register(Subject)
 class SubjectAdmin(admin.ModelAdmin):
-    # --- ИЗМЕНЕНИЯ ---
-    list_display = ('name', 'abbreviation', 'school') # Добавили школу в список
-    list_filter = ('school',) # Добавили фильтр по школам
-    search_fields = ('name', 'abbreviation', 'school__name') # Добавили поиск по названию школы
-    ordering = ('school', 'name') # Добавили сортировку
+    list_display = ('name', 'abbreviation', 'school')
+    list_filter = ('school',)
+    search_fields = ('name', 'abbreviation', 'school__name')
+    ordering = ('school', 'name')
 
 @admin.register(Quarter)
 class QuarterAdmin(admin.ModelAdmin):
@@ -65,4 +65,4 @@ class GatTestAdmin(admin.ModelAdmin):
 class StudentResultAdmin(admin.ModelAdmin):
     list_display = ('student', 'gat_test')
     list_filter = ('gat_test__school_class__school', 'gat_test')
-    search_fields = ('student__last_name', 'student__student_id', 'gat_test__name')
+    search_fields = ('student__last_name_ru', 'student__student_id', 'gat_test__name')

@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+    <h1 class="text-3xl font-bold text-gray-800 mb-6">{{ title }}</h1>
+    <div class="bg-white shadow-md rounded-lg p-8">
+        <div class="mb-6 p-4 bg-blue-100 text-blue-800 rounded-lg">
+            <h3 class="font-bold">Формат Excel-файла</h3>
+            <p>Файл должен содержать следующие колонки: <strong>Имя Фамилия, Ном Насаб, Name Surname, ID учеников, Школа, Класс</strong></p>
+        </div>
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            {{ form|crispy }}
+            <div class="mt-8 flex justify-end">
+                <a href="{% url 'student_list' %}" class="bg-gray-200 text-gray-800 px-4 py-2 rounded-lg mr-4">Назад к списку</a>
+                <button type="submit" class="bg-indigo-600 text-white px-4 py-2 rounded-lg">Загрузить</button>
+            </div>
+        </form>
+    </div>
+{% endblock %}

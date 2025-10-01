@@ -1,16 +1,15 @@
-# core/models.py
+# D:\New_GAT\core\models.py (ОКОНЧАТЕЛЬНАЯ ВЕРСИЯ БЕЗ ДУБЛИРОВАНИЯ)
 
 from django.db import models
 from django.contrib.auth.models import User
-from django.db.models.signals import post_save
-from django.dispatch import receiver
+
 class AcademicYear(models.Model):
     name = models.CharField(max_length=100, unique=True)
     start_date = models.DateField()
     end_date = models.DateField()
 
     class Meta:
-        ordering = ['-start_date'] # Сортируем по дате начала, новые сверху
+        ordering = ['-start_date']
 
     def __str__(self):
         return self.name
@@ -20,28 +19,22 @@ class School(models.Model):
     address = models.CharField(max_length=300)
 
     class Meta:
-        ordering = ['name'] # Сортируем по названию
+        ordering = ['name']
 
     def __str__(self):
         return self.name
 
 class Subject(models.Model):
-    # --- НОВОЕ ПОЛЕ ---
-    # Связываем предмет со школой. Если школа удаляется, удаляются и ее предметы.
     school = models.ForeignKey('School', on_delete=models.CASCADE, related_name='subjects')
-    
-    name = models.CharField(max_length=100) # Убираем unique=True отсюда
-    abbreviation = models.CharField(max_length=50, null=True, blank=True) # Убираем unique=True
+    name = models.CharField(max_length=100)
+    abbreviation = models.CharField(max_length=50, null=True, blank=True)
     gat_info = models.CharField(max_length=100, blank=True, help_text="Для какого GAT предназначен этот предмет (просто информация)")
 
     class Meta:
-        # --- ИЗМЕНЕНИЕ ---
-        # Название предмета и аббревиатура должны быть уникальными В ПРЕДЕЛАХ ОДНОЙ ШКОЛЫ.
         unique_together = ('school', 'name')
         ordering = ['school', 'name']
 
     def __str__(self):
-        # Отображаем предмет вместе со школой для ясности
         return f"{self.name} ({self.school.name})"
 
 class Quarter(models.Model):
@@ -51,7 +44,7 @@ class Quarter(models.Model):
     end_date = models.DateField()
 
     class Meta:
-        ordering = ['-year__start_date', 'start_date'] # Сначала по году, потом по дате начала
+        ordering = ['-year__start_date', 'start_date']
 
     def __str__(self):
         return f"{self.name} ({self.year.name})"
@@ -61,25 +54,17 @@ class SchoolClass(models.Model):
     school = models.ForeignKey('School', on_delete=models.CASCADE, related_name='classes')
     subjects = models.ManyToManyField('Subject', through='ClassSubject', related_name='school_classes')
     
-    # --- ВОТ ЭТО ПОЛЕ НУЖНО ДОБАВИТЬ ---
-    parent = models.ForeignKey(
-        'self', 
-        on_delete=models.SET_NULL, 
-        null=True, 
-        blank=True, 
-        related_name='subclasses'
-    )
-
-    class Meta:
-        unique_together = ('school', 'name')
-        ordering = ['school__name', 'name']
-
-    def __str__(self):
-        return f"{self.name} ({self.school.name})"
-    
-    # --- НОВОЕ ПОЛЕ ---
-    # Для классов-букв (10А, 10Б) это поле будет указывать на родительский, "базовый" класс (10)
     parent = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True, related_name='subclasses')
+    
+    homeroom_teacher = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='homeroom_class',
+        verbose_name="Классный руководитель",
+        limit_choices_to={'profile__role': 'TEACHER'}
+    )
 
     class Meta:
         unique_together = ('school', 'name')
@@ -94,7 +79,7 @@ class ClassSubject(models.Model):
     number_of_questions = models.PositiveIntegerField()
 
     class Meta:
-        unique_together = ('school_class', 'subject') # Класс может иметь предмет только один раз
+        unique_together = ('school_class', 'subject')
 
     def __str__(self):
         return f"{self.school_class} - {self.subject}"
@@ -115,15 +100,30 @@ class GatTest(models.Model):
 
 class Student(models.Model):
     student_id = models.CharField(max_length=50, unique=True)
-    last_name = models.CharField(max_length=100)
-    first_name = models.CharField(max_length=100)
+    
+    # --- ИЗМЕНЕНИЕ: Заменяем старые поля имени ---
+    # last_name = models.CharField(max_length=100)
+    # first_name = models.CharField(max_length=100)
+    
+    # Новые поля для мультиязычности
+    last_name_ru = models.CharField('Фамилия (рус.)', max_length=100)
+    first_name_ru = models.CharField('Имя (рус.)', max_length=100)
+    
+    last_name_tj = models.CharField('Насаб (точ.)', max_length=100, blank=True)
+    first_name_tj = models.CharField('Ном (точ.)', max_length=100, blank=True)
+    
+    last_name_en = models.CharField('Last Name (eng.)', max_length=100, blank=True)
+    first_name_en = models.CharField('First Name (eng.)', max_length=100, blank=True)
+    
     school_class = models.ForeignKey('SchoolClass', on_delete=models.CASCADE, related_name='students')
 
     class Meta:
-        ordering = ['school_class', 'last_name', 'first_name']
+        # Сортируем по русской версии фамилии
+        ordering = ['school_class', 'last_name_ru', 'first_name_ru']
 
     def __str__(self):
-        return f"{self.last_name} {self.first_name} ({self.student_id})"
+        # Отображаем русскую версию имени по умолчанию
+        return f"{self.last_name_ru} {self.first_name_ru} ({self.student_id})"
 
 class StudentResult(models.Model):
     student = models.ForeignKey('Student', on_delete=models.CASCADE, related_name='results')
@@ -137,16 +137,15 @@ class StudentResult(models.Model):
     def __str__(self):
         return f"Результат для {self.student} по тесту {self.gat_test}"
 
+class TeacherNote(models.Model):
+    """Заметка от преподавателя или администратора по конкретному студенту."""
+    student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='notes', verbose_name="Студент")
+    author = models.ForeignKey(User, on_delete=models.CASCADE, related_name='authored_notes', verbose_name="Автор")
+    note = models.TextField(verbose_name="Текст заметки")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата создания")
 
-class UserProfile(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
-    photo = models.ImageField(upload_to='profile_photos/', null=True, blank=True, default='profile_photos/default.png')
+    class Meta:
+        ordering = ['-created_at']
 
     def __str__(self):
-        return f'Профиль для {self.user.username}'
-
-# Сигнал: автоматически создаем профиль, когда создается новый пользователь
-@receiver(post_save, sender=User)
-def create_user_profile(sender, instance, created, **kwargs):
-    if created:
-        UserProfile.objects.create(user=instance)
+        return f'Заметка для {self.student} от {self.author.username}'

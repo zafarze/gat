@@ -33,13 +33,17 @@
         </a>
 
         <a href="{% url 'class_subject_list' %}" class="bg-white p-6 rounded-lg shadow-md hover:shadow-xl transition-shadow">
-            <h2 class="text-xl font-bold text-gray-800">Учебный план</h2>
-            <p class="text-gray-500 mt-2">Назначение предметов классам.</p>
+            <h2 class="text-xl font-bold text-gray-800">Вопросы по предметам</h2>
+            <p class="text-gray-500 mt-2">Указание количества вопросов для каждого предмета в классе.</p>
         </a>
         
         <a href="{% url 'gat_test_list' %}" class="bg-white p-6 rounded-lg shadow-md hover:shadow-xl transition-shadow">
             <h2 class="text-xl font-bold text-gray-800">GAT Тесты</h2>
             <p class="text-gray-500 mt-2">Создание и управление GAT тестами.</p>
+        </a>
+        <a href="{% url 'student_list' %}" class="bg-white p-6 rounded-lg   shadow-md hover:shadow-xl transition-shadow">
+            <h2 class="text-xl font-bold text-gray-800">Ученики</h2>
+            <p class="text-gray-500 mt-2">Централизованный реестр всех учеников.</p>
         </a>
 
         <a href="{% url 'upload_results' %}" class="bg-white p-6 rounded-lg shadow-md hover:shadow-xl transition-shadow border-2 border-indigo-500">

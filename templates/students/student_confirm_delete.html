@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+{% block title %}Удалить ученика{% endblock %}
+{% block content %}
+    <h1 class="text-3xl font-bold text-gray-800 mb-6">Подтвердите удаление</h1>
+    <div class="bg-white shadow-md rounded-lg p-8">
+        <p>Вы уверены, что хотите удалить ученика: <strong>{{ object }}</strong>?</p>
+        <form method="post">
+            {% csrf_token %}
+            <div class="mt-8 flex justify-end">
+                <a href="{% url 'student_list' %}" class="bg-gray-200 text-gray-800 px-4 py-2 rounded-lg mr-4">Отмена</a>
+                <button type="submit" class="bg-red-600 text-white px-4 py-2 rounded-lg">Удалить</button>
+            </div>
+        </form>
+    </div>
+{% endblock %}

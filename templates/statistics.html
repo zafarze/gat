@@ -1,133 +1,292 @@
 {% extends 'base.html' %}
+{% load static %}
+{% load custom_filters %}
 
 {% block title %}{{ title }}{% endblock %}
 
-{% block content %}
-    <h1 class="text-3xl font-bold text-gray-800 mb-6">{{ title }}</h1>
+{% block head %}
+{# Подключаем стили от страницы "Углубленный анализ" для фильтров #}
+<link rel="stylesheet" href="{% static 'css/deep_analysis.css' %}">
+{% endblock %}
 
-    {# --- НОВАЯ ПАНЕЛЬ ФИЛЬТРОВ --- #}
-    <div class="bg-white p-4 rounded-lg shadow mb-8">
-        <form method="get" class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
-            <div>
-                <label for="quarter" class="block text-sm font-medium text-gray-700">Четверть</label>
-                <select name="quarter" id="quarter" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
-                    <option value="">Все четверти</option>
-                    {% for q in quarters %}<option value="{{ q.id }}" {% if q.id == selected_quarter_id %}selected{% endif %}>{{ q }}</option>{% endfor %}
-                </select>
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+    <h1 class="text-3xl font-bold text-gray-800">{{ title }}</h1>
+
+    {# --- ПАНЕЛЬ ФИЛЬТРОВ --- #}
+    <div class="glass-card p-6 rounded-2xl">
+        <h2 class="text-2xl font-bold text-gray-800 mb-6">Фильтры</h2>
+        <form method="get" id="statistics-form">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                
+                <div class="filter-card" data-filter="quarters">
+                    <label class="font-bold text-gray-700 text-lg">{{ form.quarters.label }}</label>
+                    <div class="chip-container">
+                        {% for choice in form.quarters %}
+                            <label class="chip">{{ choice.tag }}<span>{{ choice.choice_label }}</span></label>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <div class="filter-card" data-filter="schools">
+                    <label class="font-bold text-gray-700 text-lg">{{ form.schools.label }}</label>
+                    <div class="chip-container">
+                        {% for choice in form.schools %}
+                            <label class="chip">{{ choice.tag }}<span>{{ choice.choice_label }}</span></label>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <div class="filter-card" id="classes-filter-card" data-filter="school_classes">
+                    <label class="font-bold text-gray-700 text-lg">{{ form.school_classes.label }}</label>
+                    <div id="classes-chip-container" class="chip-container">
+                        {# Сюда классы будут загружаться динамически #}
+                        {% if form.school_classes.queryset.exists %}
+                            {% for choice in form.school_classes %}
+                                <label class="chip">{{ choice.tag }}<span>{{ choice.choice_label }}</span></label>
+                            {% endfor %}
+                        {% else %}
+                            <p class="text-sm text-gray-500">Сначала выберите школу, чтобы увидеть классы.</p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="filter-card" data-filter="test_numbers">
+                    <label class="font-bold text-gray-700 text-lg">{{ form.test_numbers.label }}</label>
+                    <div class="chip-container">
+                        {% for choice in form.test_numbers %}
+                            <label class="chip">{{ choice.tag }}<span>{{ choice.choice_label }}</span></label>
+                        {% endfor %}
+                    </div>
+                </div>
             </div>
-            <div>
-                <label for="school" class="block text-sm font-medium text-gray-700">Школа</label>
-                <select name="school" id="school" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
-                    <option value="">Все школы</option>
-                    {% for s in schools %}<option value="{{ s.id }}" {% if s.id == selected_school_id %}selected{% endif %}>{{ s.name }}</option>{% endfor %}
-                </select>
+            <div class="mt-8 border-t pt-6 flex justify-end">
+                <button type="submit" class="btn btn-primary px-10 py-3 text-lg">
+                    Применить
+                </button>
             </div>
-            <div>
-                <label for="test_number" class="block text-sm font-medium text-gray-700">Тест</label>
-                <select name="test_number" id="test_number" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
-                    <option value="">Все тесты</option>
-                    <option value="1" {% if selected_test_number == 1 %}selected{% endif %}>GAT-1</option>
-                    <option value="2" {% if selected_test_number == 2 %}selected{% endif %}>GAT-2</option>
-                </select>
-            </div>
-            <button type="submit" class="w-full bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700">Применить</button>
         </form>
     </div>
 
-    {# --- НОВЫЕ KPI КАРТОЧКИ --- #}
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-        <div class="bg-white p-6 rounded-lg shadow">
-            <h3 class="text-sm font-medium text-gray-500">Средний балл</h3>
-            <p class="mt-2 text-3xl font-bold text-indigo-600">{{ average_score }}</p>
-        </div>
-        <div class="bg-white p-6 rounded-lg shadow">
-            <h3 class="text-sm font-medium text-gray-500">Процент успеваемости (>50%)</h3>
-            <p class="mt-2 text-3xl font-bold text-green-600">{{ pass_rate }}%</p>
-        </div>
-        <div class="bg-white p-6 rounded-lg shadow">
-            <h3 class="text-sm font-medium text-gray-500">Сдано тестов / Учеников</h3>
-            <p class="mt-2 text-3xl font-bold text-gray-900">{{ total_tests_taken }} / {{ total_students }}</p>
-        </div>
-        <div class="bg-white p-6 rounded-lg shadow border-l-4 border-green-500">
-            <h3 class="text-sm font-medium text-gray-500">Лучший предмет</h3>
-            <p class="mt-2 text-xl font-bold text-gray-800">{{ top_subject.name }}</p>
-            <p class="text-lg font-bold text-green-500">{{ top_subject.percentage }}%</p>
-        </div>
-        <div class="bg-white p-6 rounded-lg shadow border-l-4 border-red-500">
-            <h3 class="text-sm font-medium text-gray-500">Предмет для улучшения</h3>
-            <p class="mt-2 text-xl font-bold text-gray-800">{{ bottom_subject.name }}</p>
-            <p class="text-lg font-bold text-red-500">{{ bottom_subject.percentage }}%</p>
-        </div>
-    </div>
-
-    {# --- НОВЫЕ ГРАФИКИ --- #}
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-        <div class="bg-white p-6 rounded-lg shadow">
-            <h2 class="text-xl font-bold text-gray-800 mb-4">Успеваемость по предметам</h2>
-            <canvas id="subjectPerfChart"></canvas>
-        </div>
-        <div class="bg-white p-6 rounded-lg shadow">
-            <h2 class="text-xl font-bold text-gray-800 mb-4">Распределение баллов по ученикам</h2>
-            <canvas id="scoreDistributionChart"></canvas>
-        </div>
-    </div>
+    {# Если форма была отправлена, показываем результаты #}
+    {% if has_results %}
+        {# --- KPI КАРТОЧКИ --- #}
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
     
-    {# --- НОВАЯ ТАБЛИЦА --- #}
-    <div class="bg-white shadow-md rounded-lg overflow-x-auto">
-        <h2 class="text-xl font-bold text-gray-800 p-6">Топ-10 учеников</h2>
-        <table class="min-w-full divide-y divide-gray-200">
-            <thead class="bg-gray-50">
-                <tr>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Место</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ученик</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Класс</th>
-                    <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Итоговый балл</th>
-                </tr>
-            </thead>
-            <tbody class="bg-white divide-y divide-gray-200">
-                {% for item in top_10_students %}
-                <tr class="hover:bg-gray-50">
-                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ forloop.counter }}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ item.student }}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ item.student.school_class.name }}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-center font-bold text-indigo-600">{{ item.score }}</td>
-                </tr>
-                {% empty %}
-                <tr><td colspan="4" class="px-6 py-4 text-center text-gray-500">Нет данных для отображения.</td></tr>
+            <div class="bg-white p-4 rounded-lg shadow flex items-center space-x-4">
+                <div class="flex-shrink-0 bg-green-100 rounded-full h-12 w-12 flex items-center justify-center">
+                    <svg class="h-6 w-6 text-green-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18L9 11.25l4.306 4.307a11.95 11.95 0 015.814-5.519l2.74-1.22m0 0l-3.75-2.25M21 12l-3.75 2.25" />
+                    </svg>
+                </div>
+                <div>
+                    <h3 class="text-sm font-medium text-gray-500">Лучший предмет</h3>
+                    <p class="mt-1 text-xl font-semibold text-green-600">{{ top_subject.name }} ({{ top_subject.percentage }}%)</p>
+                </div>
+            </div>
+        
+            <div class="bg-white p-4 rounded-lg shadow flex items-center space-x-4">
+                <div class="flex-shrink-0 bg-red-100 rounded-full h-12 w-12 flex items-center justify-center">
+                    <svg class="h-6 w-6 text-red-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 6L9 12.75l4.286-4.286a11.948 11.948 0 014.306 6.43l.776 2.898m0 0l3.182-5.511m-3.182 5.511l-5.511-3.182" />
+                    </svg>
+                </div>
+                <div>
+                    <h3 class="text-sm font-medium text-gray-500">Худший предмет</h3>
+                    <p class="mt-1 text-xl font-semibold text-red-600">{{ bottom_subject.name }} ({{ bottom_subject.percentage }}%)</p>
+                </div>
+            </div>
+            
+            <div class="bg-white p-4 rounded-lg shadow">
+                <h3 class="text-sm font-medium text-gray-500">Средний балл (общий)</h3>
+                <p class="mt-1 text-2xl font-semibold text-indigo-600">{{ average_score }}</p>
+            </div>
+            <div class="bg-white p-4 rounded-lg shadow">
+                <h3 class="text-sm font-medium text-gray-500" id="total-tests-label">Всего результатов</h3>
+                <p class="mt-1 text-2xl font-semibold text-indigo-600">{{ total_tests_taken }}</p>
+            </div>
+        </div>
+
+        {# --- ГРАФИКИ --- #}
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div class="bg-white p-6 rounded-lg shadow">
+                <h3 class="text-lg font-medium leading-6 text-gray-900">Успеваемость по предметам</h3>
+                <canvas id="subjectPerfChart" class="mt-4"></canvas>
+            </div>
+            <div class="bg-white p-6 rounded-lg shadow">
+                <h3 class="text-lg font-medium leading-6 text-gray-900">Распределение баллов по ученикам</h3>
+                <canvas id="scoreDistributionChart" class="mt-4"></canvas>
+            </div>
+        </div>
+
+        {# --- КАРТОЧКА: ОБЩАЯ УСПЕВАЕМОСТЬ ПО ШКОЛЕ --- #}
+        {% if school_summary_report.grades %}
+        <div class="bg-white p-6 rounded-lg shadow">
+            <h2 class="text-xl font-bold text-gray-800 mb-4">Общая успеваемость (Итог)</h2>
+            <div class="flex items-baseline space-x-2 mb-4">
+                <p class="text-gray-600">Ҳисоби миёна (Средний балл):</p> 
+                <p class="text-4xl font-bold text-indigo-600">{{ school_summary_report.average_score }}/100</p>
+            </div>
+            <ul class="divide-y divide-gray-200">
+                {% for grade_num in grade_range %}
+                <li class="py-3 flex justify-between items-center">
+                    <span class="text-md font-medium text-gray-700">Баҳои {{ grade_num }} (Оценка {{ grade_num }})</span>
+                    <span class="text-lg font-semibold text-gray-900">{{ school_summary_report.grades|get_item:grade_num|default:0 }} учеников</span>
+                </li>
                 {% endfor %}
-            </tbody>
-        </table>
-    </div>
+            </ul>
+        </div>
+        {% endif %}
+
+        {# --- ОТЧЕТ ПО УСПЕВАЕМОСТИ --- #}
+        {% if grade_distribution_report %}
+        <div class="space-y-8">
+            <h2 class="text-2xl font-bold text-gray-800">Отчет по успеваемости (по предметам)</h2>
+            {% for subject, class_data in grade_distribution_report.items %}
+                <div class="bg-white shadow-md rounded-lg overflow-x-auto">
+                    <table class="min-w-full">
+                        <thead class="bg-yellow-400">
+                            <tr>
+                                <th class="py-3 px-4 border-r border-gray-300 w-1/4"></th>
+                                <th colspan="{{ class_data|length }}" class="py-3 px-4 text-center font-bold text-xl text-gray-800">{{ subject }}</th>
+                            </tr>
+                            <tr>
+                                <th class="py-2 px-4 border-r border-gray-300 text-left text-sm font-medium text-gray-600">Показатель</th>
+                                {% for class_name, data in class_data.items %}
+                                     {% if class_name != "Итог" %}
+                                        <th class="py-2 px-4 text-center font-bold text-lg border-r border-gray-300">{{ class_name }}</th>
+                                    {% endif %}
+                                {% endfor %}
+                                <th class="py-2 px-4 text-center font-bold text-lg bg-yellow-500 text-white">Итог</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-200">
+                            <tr class="bg-yellow-50">
+                                <td class="py-3 px-4 font-semibold border-r border-gray-300 text-sm">Ҳисоби миёна (Средний балл)</td>
+                                {% for class_name, data in class_data.items %}
+                                    {% if class_name != "Итог" %}
+                                        <td class="py-3 px-4 text-center font-bold text-lg">{{ data.average_score|default:"—" }}/100</td>
+                                    {% endif %}
+                                {% endfor %}
+                                <td class="py-3 px-4 text-center font-bold text-lg bg-gray-200">{{ class_data.Итог.average_score }}/100</td>
+                            </tr>
+                            {% for grade_num in grade_range %}
+                                <tr>
+                                    <td class="py-2 px-4 font-medium border-r border-gray-300 text-sm">Баҳои {{ grade_num }} (Оценка {{ grade_num }})</td>
+                                    {% for class_name, data in class_data.items %}
+                                        {% if class_name != "Итог" %}
+                                            <td class="py-2 px-4 text-center font-semibold">{{ data.grades|get_item:grade_num|default:0 }}</td>
+                                        {% endif %}
+                                    {% endfor %}
+                                    <td class="py-2 px-4 text-center font-bold bg-gray-200">{{ class_data.Итог.grades|get_item:grade_num|default:0 }}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% endfor %}
+        </div>
+        {% elif request.GET %}
+             <div class="bg-yellow-100 text-yellow-800 p-6 rounded-lg shadow text-center">
+                <h3 class="font-bold text-lg">Результаты не найдены</h3>
+                <p>По вашему запросу нет данных. Попробуйте выбрать другие фильтры.</p>
+            </div>
+        {% endif %}
+    {% endif %}
+</div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-    // График 1: Успеваемость по предметам
-    new Chart(document.getElementById('subjectPerfChart'), {
-        type: 'bar',
-        data: {
-            labels: {{ subject_perf_labels|safe }},
-            datasets: [{
-                label: '% правильных ответов',
-                data: {{ subject_perf_data|safe }},
-                backgroundColor: 'rgba(79, 70, 229, 0.8)'
-            }]
-        },
-        options: { indexAxis: 'y', responsive: true, plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true, max: 100 } } }
+document.addEventListener('DOMContentLoaded', function () {
+    // --- НАЧАЛО КОДА ДЛЯ ДИНАМИЧЕСКИХ ФИЛЬТРОВ ---
+    const schoolsContainer = document.querySelector('[data-filter="schools"]');
+    const classesContainer = document.getElementById('classes-chip-container');
+    const classesCard = document.getElementById('classes-filter-card');
+
+    const loadClassesForSchools = () => {
+        // Собираем ID всех выбранных школ
+        const selectedSchoolIDs = Array.from(schoolsContainer.querySelectorAll('input:checked')).map(cb => cb.value);
+
+        // Если школы не выбраны, очищаем и сбрасываем блок с классами
+        if (selectedSchoolIDs.length === 0) {
+            classesContainer.innerHTML = '<p class="text-sm text-gray-500">Сначала выберите школу, чтобы увидеть классы.</p>';
+            return;
+        }
+        
+        // Формируем URL для API-запроса
+        const url = `{% url 'api_load_subjects_and_classes' %}?school_ids[]=${selectedSchoolIDs.join('&school_ids[]=')}`;
+
+        // Делаем запрос на сервер
+        fetch(url)
+            .then(response => response.json())
+            .then(data => {
+                classesContainer.innerHTML = ''; // Очищаем контейнер
+                if (data.classes && data.classes.length > 0) {
+                    // Создаем новые "чипы" (checkboxes) для каждого класса
+                    data.classes.forEach(cls => {
+                        const label = document.createElement('label');
+                        label.className = 'chip';
+                        label.innerHTML = `
+                            <input type="checkbox" name="school_classes" value="${cls.id}">
+                            <span>${cls.name}</span>
+                        `;
+                        classesContainer.appendChild(label);
+                    });
+                } else {
+                    classesContainer.innerHTML = '<p class="text-sm text-gray-500">Для выбранных школ классы не найдены.</p>';
+                }
+            })
+            .catch(error => {
+                console.error('Ошибка при загрузке классов:', error);
+                classesContainer.innerHTML = '<p class="text-sm text-red-500">Не удалось загрузить классы.</p>';
+            });
+    };
+
+    // Вешаем обработчик событий на контейнер со школами
+    if (schoolsContainer) {
+        schoolsContainer.addEventListener('change', loadClassesForSchools);
+    }
+    // --- КОНЕЦ КОДА ДЛЯ ДИНАМИЧЕСКИХ ФИЛЬТРОВ ---
+
+    // Активируем чипы, которые были выбраны при загрузке страницы
+    const urlParams = new URLSearchParams(window.location.search);
+    document.querySelectorAll('.filter-card').forEach(card => {
+        const filterName = card.dataset.filter;
+        const paramValues = urlParams.getAll(filterName);
+        if (paramValues.length > 0) {
+            card.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+                if (paramValues.includes(cb.value)) {
+                    cb.checked = true;
+                }
+            });
+        }
     });
 
-    // График 2: Распределение баллов
-    new Chart(document.getElementById('scoreDistributionChart'), {
-        type: 'bar',
-        data: {
-            labels: {{ distribution_labels|safe }},
-            datasets: [{
-                label: 'Количество учеников',
-                data: {{ distribution_data|safe }},
-                backgroundColor: 'rgba(16, 185, 129, 0.8)'
-            }]
-        },
-        options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, title: {display: true, text: 'Кол-во учеников'} }, x: { title: {display: true, text: 'Баллы'} } } }
-    });
+    // Отрисовка графиков
+    {% if has_results %}
+        try {
+            const subjectPerfLabels = {{ subject_perf_labels|safe }};
+            if (subjectPerfLabels && subjectPerfLabels.length > 0) {
+                new Chart(document.getElementById('subjectPerfChart'), {
+                    type: 'bar',
+                    data: { labels: subjectPerfLabels, datasets: [{ label: 'Успеваемость (%)', data: {{ subject_perf_data|safe }}, backgroundColor: 'rgba(79, 70, 229, 0.8)' }] },
+                    options: { indexAxis: 'y', responsive: true, plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true, max: 100, ticks: { callback: (v) => v + '%' } } } }
+                });
+            }
+        } catch (e) { console.error('Ошибка отрисовки графика по предметам:', e); }
+
+        try {
+            const distributionLabels = {{ distribution_labels|safe }};
+            if (distributionLabels && distributionLabels.length > 0) {
+                new Chart(document.getElementById('scoreDistributionChart'), {
+                    type: 'bar',
+                    data: { labels: distributionLabels, datasets: [{ label: 'Количество учеников', data: {{ distribution_data|safe }}, backgroundColor: 'rgba(5, 150, 105, 0.8)' }] },
+                    options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, title: {display: true, text: 'Кол-во учеников'} }, x: { title: {display: true, text: 'Баллы'} } } }
+                });
+            }
+        } catch (e) { console.error('Ошибка отрисовки графика распределения баллов:', e); }
+    {% endif %}
+});
 </script>
 
 {% endblock %}

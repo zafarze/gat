@@ -1,10 +1,10 @@
-{# D:\New_GAT\templates\components\sidebar.html (ИСПРАВЛЕННАЯ ВЕРСИЯ) #}
+{# D:\New_GAT\templates\components\sidebar.html (ПОЛНАЯ ИСПРАВЛЕННАЯ ВЕРСИЯ) #}
 <div class="flex flex-col h-full bg-gray-800 text-white overflow-hidden">
 
     <div class="flex items-center justify-between h-16 flex-shrink-0 px-4 bg-gray-900">
         <span class="text-white font-bold text-lg whitespace-nowrap transition-opacity duration-200" :class="{'opacity-100': !sidebarCollapsed, 'opacity-0': sidebarCollapsed}">GAT Report</span>
         
-        <button @click="sidebarCollapsed = !sidebarCollapsed" class="hidden md:block p-1 rounded-md hover:bg-gray-700">
+        <button @click="sidebarCollapsed = !sidebarCollapsed" class="hidden md:block p-1 rounded-md hover:bg-gray-700 focus:outline-none">
             <svg x-show="!sidebarCollapsed" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg>
             <svg x-show="sidebarCollapsed" style="display: none;" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
         </button>
@@ -13,50 +13,68 @@
     <div class="flex-1 overflow-y-auto">
         <nav class="px-2 py-4 space-y-2">
             {% with request.resolver_match.url_name as url_name %}
+            
             <a href="{% url 'dashboard' %}" class="group relative flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors {% if url_name == 'dashboard' %}bg-gray-900{% else %}hover:bg-gray-700{% endif %}">
                 <svg class="mr-3 h-6 w-6 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>
                 <span class="whitespace-nowrap transition-opacity duration-200" :class="{'opacity-0': sidebarCollapsed}">Главная</span>
-                <span x-show="sidebarCollapsed" style="display:none;" class="absolute left-full ml-4 px-2 py-1 text-xs font-medium text-white bg-gray-900 rounded-md opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">Главная</span>
+                <span x-show="sidebarCollapsed" style="display:none;" class="absolute left-full ml-4 px-2 py-1 text-xs font-medium text-white bg-gray-900 rounded-md opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">Главная</span>
             </a>
+            
+            {% if user.is_superuser %}
             <a href="{% url 'upload_results' %}" class="group relative flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors {% if url_name == 'upload_results' %}bg-gray-900{% else %}hover:bg-gray-700{% endif %}">
                 <svg class="mr-3 h-6 w-6 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
                 <span class="whitespace-nowrap transition-opacity duration-200" :class="{'opacity-0': sidebarCollapsed}">Upload</span>
-                <span x-show="sidebarCollapsed" style="display:none;" class="absolute left-full ml-4 px-2 py-1 text-xs font-medium text-white bg-gray-900 rounded-md opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">Upload</span>
+                <span x-show="sidebarCollapsed" style="display:none;" class="absolute left-full ml-4 px-2 py-1 text-xs font-medium text-white bg-gray-900 rounded-md opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">Upload</span>
             </a>
-
-            {# --- ИСПРАВЛЕНИЕ ЗДЕСЬ --- #}
-            <a href="{% url 'results_archive' %}" class="group relative flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors {% if 'archive' in url_name or 'results' in url_name or 'class_results' in url_name %}bg-gray-900{% else %}hover:bg-gray-700{% endif %}">
+            {% endif %}
+            <a href="{% url 'results_archive' %}" class="group relative flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors {% if 'result' in url_name or 'archive' in url_name %}bg-gray-900{% else %}hover:bg-gray-700{% endif %}">
                 <svg class="mr-3 h-6 w-6 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
                 <span class="whitespace-nowrap transition-opacity duration-200" :class="{'opacity-0': sidebarCollapsed}">Результаты</span>
-                <span x-show="sidebarCollapsed" style="display:none;" class="absolute left-full ml-4 px-2 py-1 text-xs font-medium text-white bg-gray-900 rounded-md opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">Результаты</span>
+                <span x-show="sidebarCollapsed" style="display:none;" class="absolute left-full ml-4 px-2 py-1 text-xs font-medium text-white bg-gray-900 rounded-md opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">Результаты</span>
             </a>
 
             <a href="{% url 'statistics' %}" class="group relative flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors {% if url_name == 'statistics' %}bg-gray-900{% else %}hover:bg-gray-700{% endif %}">
                 <svg class="mr-3 h-6 w-6 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2z"/></svg>
                 <span class="whitespace-nowrap transition-opacity duration-200" :class="{'opacity-0': sidebarCollapsed}">Статистика</span>
-                <span x-show="sidebarCollapsed" style="display:none;" class="absolute left-full ml-4 px-2 py-1 text-xs font-medium text-white bg-gray-900 rounded-md opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">Статистика</span>
+                <span x-show="sidebarCollapsed" style="display:none;" class="absolute left-full ml-4 px-2 py-1 text-xs font-medium text-white bg-gray-900 rounded-md opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">Статистика</span>
             </a>
+            
             <a href="{% url 'analysis' %}" class="group relative flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors {% if url_name == 'analysis' %}bg-gray-900{% else %}hover:bg-gray-700{% endif %}">
                 <svg class="mr-3 h-6 w-6 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 3.055A9 9 0 0120.945 13H11V3.055z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" /></svg>
                 <span class="whitespace-nowrap transition-opacity duration-200" :class="{'opacity-0': sidebarCollapsed}">Анализ успеваемости</span>
-                <span x-show="sidebarCollapsed" style="display:none;" class="absolute left-full ml-4 px-2 py-1 text-xs font-medium text-white bg-gray-900 rounded-md opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">Анализ успеваемости</span>
+                <span x-show="sidebarCollapsed" style="display:none;" class="absolute left-full ml-4 px-2 py-1 text-xs font-medium text-white bg-gray-900 rounded-md opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">Анализ успеваемости</span>
             </a>
+            
             <a href="{% url 'deep_analysis' %}" class="group relative flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors {% if url_name == 'deep_analysis' %}bg-gray-900{% else %}hover:bg-gray-700{% endif %}">
                 <svg class="mr-3 h-6 w-6 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                 <span class="whitespace-nowrap transition-opacity duration-200" :class="{'opacity-0': sidebarCollapsed}">Углубленный анализ</span>
-                <span x-show="sidebarCollapsed" style="display:none;" class="absolute left-full ml-4 px-2 py-1 text-xs font-medium text-white bg-gray-900 rounded-md opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">Углубленный анализ</span>
+                <span x-show="sidebarCollapsed" style="display:none;" class="absolute left-full ml-4 px-2 py-1 text-xs font-medium text-white bg-gray-900 rounded-md opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">Углубленный анализ</span>
             </a>
-            <a href="#" class="group relative flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors hover:bg-gray-700 text-gray-500 cursor-not-allowed">
+
+            <a href="{% url 'monitoring' %}" class="group relative flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors {% if url_name == 'monitoring' %}bg-gray-900{% else %}hover:bg-gray-700{% endif %}">
                 <svg class="mr-3 h-6 w-6 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
                 <span class="whitespace-nowrap transition-opacity duration-200" :class="{'opacity-0': sidebarCollapsed}">Мониторинг</span>
-                <span x-show="sidebarCollapsed" style="display:none;" class="absolute left-full ml-4 px-2 py-1 text-xs font-medium text-white bg-gray-900 rounded-md opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">Мониторинг</span>
+                <span x-show="sidebarCollapsed" style="display:none;" class="absolute left-full ml-4 px-2 py-1 text-xs font-medium text-white bg-gray-900 rounded-md opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">Мониторинг</span>
+            </a>
+
+            <a href="{% url 'grading' %}" class="group relative flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors {% if url_name == 'grading' %}bg-gray-900{% else %}hover:bg-gray-700{% endif %}">
+                <svg class="mr-3 h-6 w-6 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                <span class="whitespace-nowrap transition-opacity duration-200" :class="{'opacity-0': sidebarCollapsed}">Оценки</span>
+                <span x-show="sidebarCollapsed" style="display:none;" class="absolute left-full ml-4 px-2 py-1 text-xs font-medium text-white bg-gray-900 rounded-md opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">Оценки</span>
             </a>
             
-            <a href="{% url 'management' %}" class="group relative flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors {% if 'year' in url_name or 'quarter' in url_name or 'school' in url_name or 'class' in url_name or 'subject' in url_name or url_name == 'management' %}bg-gray-900{% else %}hover:bg-gray-700{% endif %}">
+            {% if user.is_superuser %}
+            <a href="{% url 'management' %}" class="group relative flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors {% if 'year' in url_name or 'quarter' in url_name or 'school' in url_name or 'class' in url_name or 'subject' in url_name or 'student' in url_name or url_name == 'management' %}bg-gray-900{% else %}hover:bg-gray-700{% endif %}">
                 <svg class="mr-3 h-6 w-6 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
                 <span class="whitespace-nowrap transition-opacity duration-200" :class="{'opacity-0': sidebarCollapsed}">Управление</span>
-                <span x-show="sidebarCollapsed" style="display:none;" class="absolute left-full ml-4 px-2 py-1 text-xs font-medium text-white bg-gray-900 rounded-md opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">Управление</span>
+                <span x-show="sidebarCollapsed" style="display:none;" class="absolute left-full ml-4 px-2 py-1 text-xs font-medium text-white bg-gray-900 rounded-md opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">Управление</span>
             </a>
+            <a href="{% url 'user_list' %}" class="group relative flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors {% if 'user' in url_name %}bg-gray-900{% else %}hover:bg-gray-700{% endif %}">
+                <svg class="mr-3 h-6 w-6 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M15 21v-1a6 6 0 00-1-3.727" /></svg>
+                <span class="whitespace-nowrap transition-opacity duration-200" :class="{'opacity-0': sidebarCollapsed}">Пользователи</span>
+                <span x-show="sidebarCollapsed" style="display:none;" class="absolute left-full ml-4 px-2 py-1 text-xs font-medium text-white bg-gray-900 rounded-md opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">Пользователи</span>
+            </a>
+            {% endif %}
             {% endwith %}
         </nav>
     </div>

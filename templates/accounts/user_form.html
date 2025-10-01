@@ -1,0 +1,47 @@
+{% extends 'base.html' %}
+{% block content %}
+<h1 class="text-3xl font-bold text-gray-800 mb-6">{{ title }}</h1>
+<div class="bg-white p-8 rounded-lg shadow-md max-w-4xl mx-auto">
+    <form method="post" novalidate>
+        {% csrf_token %}
+        <div class="space-y-6">
+            <div>
+                <h2 class="text-xl font-semibold text-gray-700 border-b pb-2 mb-4">Данные аккаунта</h2>
+                {{ user_form.as_p }}
+            </div>
+            
+            {# --- БЛОК С ALPINE.JS --- #}
+            <div x-data="{ role: '{{ profile_form.role.value|default:'EXPERT' }}' }">
+                <h2 class="text-xl font-semibold text-gray-700 border-b pb-2 mb-4">Профиль и роль</h2>
+                
+                {# Поле выбора роли #}
+                <p>
+                    <label for="{{ profile_form.role.id_for_label }}">Роль пользователя:</label>
+                    {{ profile_form.role }}
+                </p>
+
+                {# Поле "Школа", которое появляется только для Директора #}
+                <div x-show="role === 'SCHOOL_DIRECTOR'" x-transition>
+                    <p>
+                        <label for="{{ profile_form.school.id_for_label }}">Привязанная школа:</label>
+                        {{ profile_form.school }}
+                    </p>
+                </div>
+
+                {# Поле "Предмет", которое появляется только для Эксперта #}
+                <div x-show="role === 'EXPERT'" x-transition>
+                     <p>
+                        <label for="{{ profile_form.subject.id_for_label }}">Предмет экспертизы:</label>
+                        {{ profile_form.subject }}
+                    </p>
+                </div>
+            </div>
+             {# --- КОНЕЦ БЛОКА --- #}
+        </div>
+        <div class="mt-8 flex justify-end space-x-3">
+            <a href="{% url 'user_list' %}" class="bg-gray-200 text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-300">Отмена</a>
+            <button type="submit" class="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700">Сохранить</button>
+        </div>
+    </form>
+</div>
+{% endblock %}

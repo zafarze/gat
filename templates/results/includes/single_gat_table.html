@@ -16,13 +16,11 @@
         <tr class="hover:bg-gray-50">
             <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ forloop.counter }}</td>
             
-            {# --- ИЗМЕНЕНИЕ ЗДЕСЬ --- #}
             <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                  <a href="{% url 'student_progress' data.student.id %}" class="text-indigo-600 hover:text-indigo-800 hover:underline">
                     {{ data.student.last_name }} {{ data.student.first_name }}
                 </a>
             </td>
-            {# --- КОНЕЦ ИЗМЕНЕНИЯ --- #}
 
             <td class="px-6 py-4 whitespace-nowrap text-sm text-center font-bold {% if data.score is None %}text-red-500{% else %}text-gray-800{% endif %}">
                 {{ data.score|default:"—" }}

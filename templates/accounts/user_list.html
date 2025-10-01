@@ -1,0 +1,86 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="flex justify-between items-center mb-6">
+    <h1 class="text-3xl font-bold text-gray-800">{{ title }}</h1>
+    <a href="{% url 'user_add' %}" class="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition">
+        + Добавить пользователя
+    </a>
+</div>
+
+<div x-data="{ activeTab: 'all' }">
+    <div class="border-b border-gray-200 mb-4">
+        <nav class="-mb-px flex space-x-6">
+            <button @click="activeTab = 'all'" :class="{ 'border-indigo-500 text-indigo-600': activeTab === 'all', 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300': activeTab !== 'all' }" class="whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm">Все</button>
+            <button @click="activeTab = 'directors'" :class="{ 'border-indigo-500 text-indigo-600': activeTab === 'directors', 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300': activeTab !== 'directors' }" class="whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm">Директоры</button>
+            <button @click="activeTab = 'experts'" :class="{ 'border-indigo-500 text-indigo-600': activeTab === 'experts', 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300': activeTab !== 'experts' }" class="whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm">Эксперты</button>
+        </nav>
+    </div>
+
+    <div class="bg-white shadow-md rounded-lg overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">№</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ф.И.О</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Роль</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Привязка</th>
+                    <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Статус</th>
+                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Действия</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                {% for user in users %}
+                {# --- ИСПРАВЛЕНИЕ ЗДЕСЬ: Логика для Alpine.js --- #}
+                <tr x-show="
+                    activeTab === 'all' ||
+                    (activeTab === 'directors' && '{{ user.profile.role }}' === 'SCHOOL_DIRECTOR') ||
+                    (activeTab === 'experts' && '{{ user.profile.role }}' === 'EXPERT') ||
+                    (activeTab !== 'directors' && activeTab !== 'experts' && '{{ user.is_superuser }}' === 'True')
+                " class="hover:bg-gray-50" x-cloak>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ forloop.counter }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                        {{ user.get_full_name|default:user.username }}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ user.email }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {% if user.is_superuser %}
+                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">Администратор</span>
+                        {% elif user.profile %}
+                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
+                                {{ user.profile.get_role_display }}
+                            </span>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {% if user.profile %}
+                            {% if user.profile.role == 'SCHOOL_DIRECTOR' and user.profile.school %}
+                                🏫 {{ user.profile.school.name }}
+                            {% elif user.profile.role == 'EXPERT' and user.profile.subject %}
+                                🔬 {{ user.profile.subject.name }}
+                            {% endif %}
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-center">
+                        {% if not user.is_superuser %}
+                            <a href="{% url 'user_toggle_active' user.pk %}" class="inline-flex items-center" title="Изменить статус">
+                                <span class="relative">
+                                    <span class="block w-10 h-6 rounded-full {% if user.is_active %}bg-green-200{% else %}bg-gray-200{% endif %}"></span>
+                                    <span class="absolute left-1 top-1 block w-4 h-4 rounded-full bg-white transition-transform {% if user.is_active %}translate-x-full{% endif %}"></span>
+                                </span>
+                            </a>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <a href="{% url 'user_edit' user.pk %}" class="text-indigo-600 hover:text-indigo-900">Редактировать</a>
+                        {% if not user.is_superuser %}
+                        <a href="{% url 'user_delete' user.pk %}" class="text-red-600 hover:text-red-900 ml-4">Удалить</a>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
