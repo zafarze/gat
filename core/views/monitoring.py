@@ -99,13 +99,14 @@ def _get_monitoring_context(get_params, request_user):
             if parent_class_ids:
                 missing_subject_ids = [s.id for s in header_subjects if s.id not in q_counts]
                 if missing_subject_ids:
-                    parent_class_subjects_qs = ClassSubject.objects.filter(
+                    parent_class_subjects = ClassSubject.objects.filter(
                         school_class_id__in=parent_class_ids,
-                        subject_id__in=missing_subject_ids
-                    ).order_by('subject_id').distinct('subject_id')
+        				subject_id__in=missing_subject_ids
+    				).order_by('subject_id')
 
-                    for cs in parent_class_subjects_qs:
-                        q_counts[cs.subject_id] = cs.number_of_questions
+                    for cs in parent_class_subjects:
+                        if cs.subject_id not in q_counts:
+                            q_counts[cs.subject_id] = cs.number_of_questions
 
         table_headers = []
         for subj in header_subjects:
