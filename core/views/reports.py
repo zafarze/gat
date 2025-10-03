@@ -35,7 +35,12 @@ def upload_results_view(request):
                 messages.success(request, f"Успешно обработано {report['processed_count']} результатов.")
                 if report['skipped_count'] > 0:
                     messages.warning(request, f"Пропущено {report['skipped_count']} студентов.")
-                return redirect('detailed_results_list', test_number=gat_test.test_number)
+
+                # --- ИЗМЕНЕНИЕ ЗДЕСЬ ---
+                # Теперь мы передаем ID конкретного теста на страницу результатов
+                redirect_url = reverse('detailed_results_list', kwargs={'test_number': gat_test.test_number})
+                return redirect(f'{redirect_url}?test_id={gat_test.id}')
+
             except ValueError as e:
                 messages.error(request, f'Ошибка в данных файла: {e}')
             except Exception as e:
@@ -45,25 +50,60 @@ def upload_results_view(request):
     return render(request, 'results/upload_form.html', {'form': form, 'title': 'Загрузка результатов'})
 
 def get_detailed_results_data(test_number, request_get, request_user):
+    """
+    Готовит данные для детального рейтинга.
+    - Если передан 'test_id' (после загрузки), показывает результаты для конкретного теста.
+    - Иначе, находит самый последний по дате тест, соответствующий фильтрам.
+    """
     year_id, quarter_id, school_id, class_id = request_get.get('year'), request_get.get('quarter'), request_get.get('school'), request_get.get('class')
-    tests_qs = GatTest.objects.filter(test_number=test_number).select_related('quarter__year', 'school_class__school')
     
-    if not request_user.is_superuser and hasattr(request_user, 'profile') and request_user.profile.role == 'SCHOOL_DIRECTOR':
-        if request_user.profile.school:
-            tests_qs = tests_qs.filter(school_class__school=request_user.profile.school)
+    test_id_from_upload = request_get.get('test_id')
+    latest_test = None
+
+    # 1. Если мы пришли со страницы загрузки, используем конкретный ID теста
+    if test_id_from_upload:
+        specific_test = GatTest.objects.filter(pk=test_id_from_upload, test_number=test_number).select_related('school_class__school', 'quarter__year').first()
+        if specific_test:
+            latest_test = specific_test
     
-    if year_id: tests_qs = tests_qs.filter(quarter__year_id=year_id)
-    if quarter_id: tests_qs = tests_qs.filter(quarter_id=quarter_id)
-    if school_id: tests_qs = tests_qs.filter(school_class__school_id=school_id)
-    if class_id: tests_qs = tests_qs.filter(school_class_id=class_id)
+    # 2. Если ID не было (обычный заход на страницу), ищем самый последний тест по фильтрам
+    if not latest_test:
+        tests_qs = GatTest.objects.filter(test_number=test_number).select_related('quarter__year', 'school_class__school')
+        
+        # Фильтр по роли директора
+        if not request_user.is_superuser and hasattr(request_user, 'profile') and request_user.profile.role == 'SCHOOL_DIRECTOR':
+            if request_user.profile.school:
+                tests_qs = tests_qs.filter(school_class__school=request_user.profile.school)
+        
+        # Применение фильтров со страницы
+        if year_id: tests_qs = tests_qs.filter(quarter__year_id=year_id)
+        if quarter_id: tests_qs = tests_qs.filter(quarter_id=quarter_id)
+        if school_id: tests_qs = tests_qs.filter(school_class__school_id=school_id)
+        if class_id: tests_qs = tests_qs.filter(school_class_id=class_id)
+
+        latest_test = tests_qs.order_by('-test_date').first()
     
-    student_results = StudentResult.objects.filter(gat_test__in=tests_qs).select_related('student__school_class', 'gat_test')
+    # Если в итоге ни одного теста не найдено, возвращаем пустые данные
+    if not latest_test:
+        return [], [], None
+
+    # 3. Работаем дальше только с результатами этого найденного теста (latest_test)
+    student_results = StudentResult.objects.filter(gat_test=latest_test).select_related('student__school_class', 'gat_test')
     
-    table_header, first_test = [], tests_qs.first()
-    if first_test:
-        class_subjects = ClassSubject.objects.filter(school_class=first_test.school_class, subject__in=first_test.subjects.all()).select_related('subject').order_by('subject__name')
-        for cs in class_subjects:
-            table_header.append({'subject': cs.subject, 'questions': range(1, cs.number_of_questions + 1)})
+    # Заголовки таблицы строим на основе этого же теста
+    table_header = []
+    # Учитываем, что у класса может быть родитель (параллель) для поиска предметов
+    class_ids_to_check = [latest_test.school_class.id]
+    if latest_test.school_class.parent_id:
+        class_ids_to_check.append(latest_test.school_class.parent_id)
+
+    class_subjects = ClassSubject.objects.filter(
+        school_class_id__in=class_ids_to_check, 
+        subject__in=latest_test.subjects.all()
+    ).select_related('subject').order_by('subject__name').distinct('subject__name')
+    
+    for cs in class_subjects:
+        table_header.append({'subject': cs.subject, 'questions': range(1, cs.number_of_questions + 1)})
             
     results_map = {res.student_id: res for res in student_results}
     students = Student.objects.filter(id__in=results_map.keys()).select_related('school_class')
@@ -75,16 +115,28 @@ def get_detailed_results_data(test_number, request_get, request_user):
         students_data.append({'student': student, 'result': result, 'total_score': total_score})
         
     students_data.sort(key=lambda x: x['total_score'], reverse=True)
-    return students_data, table_header
+    
+    # Возвращаем данные и сам объект теста для использования в заголовке
+    return students_data, table_header, latest_test
+
 
 @login_required
 def detailed_results_list_view(request, test_number):
-    students_data, table_header = get_detailed_results_data(test_number, request.GET, request.user)
+    # --- ИЗМЕНЕНИЕ 3: Получаем третий параметр - объект теста ---
+    students_data, table_header, latest_test = get_detailed_results_data(test_number, request.GET, request.user)
     context = {
-        'title': f'Детальный рейтинг GAT-{test_number}', 'students_data': students_data, 'table_header': table_header,
-        'years': AcademicYear.objects.all(), 'schools': School.objects.all(), 'selected_year': request.GET.get('year'),
-        'selected_quarter': request.GET.get('quarter'), 'selected_school': request.GET.get('school'),
-        'selected_class': request.GET.get('class'), 'test_number': test_number
+        'title': f'Детальный рейтинг GAT-{test_number}', 
+        'students_data': students_data, 
+        'table_header': table_header,
+        'years': AcademicYear.objects.all(), 
+        'schools': School.objects.all(), 
+        'selected_year': request.GET.get('year'),
+        'selected_quarter': request.GET.get('quarter'), 
+        'selected_school': request.GET.get('school'),
+        'selected_class': request.GET.get('class'), 
+        'test_number': test_number,
+        # --- ИЗМЕНЕНИЕ 4: Добавляем тест в контекст ---
+        'test': latest_test 
     }
     return render(request, 'results/detailed_results_list.html', context)
 
@@ -199,7 +251,14 @@ def class_results_dashboard_view(request, quarter_id, class_id):
     for student_id, data in all_students_map.items():
         score1, score2 = data.get('score1'), data.get('score2')
         total_score = (score1 or 0) + (score2 or 0) if score1 is not None or score2 is not None else None
-        students_data_total.append({'student': data['student'], 'score1': score1, 'score2': score2, 'total_score': total_score})
+        students_data_total.append({
+            'student': data['student'],
+            'score1': score1,
+            'score2': score2,
+            'total_score': total_score,
+            # --- ВОТ ЭТА СТРОКА ДОБАВЛЕНА ---
+            'display_class': data['student'].school_class.school.name 
+        })
     students_data_total.sort(key=lambda x: (x['total_score'] is None, -x.get('total_score', 0) if x.get('total_score') is not None else 0))
     context = {
         'title': f'Отчет: {school_class.name}', 'school_class': school_class, 'quarter': quarter, 'students_data_total': students_data_total,
@@ -236,47 +295,33 @@ def compare_class_tests_view(request, test1_id, test2_id):
 @login_required
 def analysis_view(request):
     """
-    Отображает страницу 'Анализ успеваемости', сравнивая классы внутри одной школы.
+    Отображает страницу 'Анализ успеваемости' с общим рейтингом предметов.
     """
     user = request.user
-    
-    # --- Подготовка данных для фильтров ---
+
     schools_qs = School.objects.all()
     quarters_qs = Quarter.objects.annotate(test_count=Count('gattests')).filter(test_count__gt=0)
-    
-    # Если пользователь - директор, ограничиваем выбор школ
+
     if not user.is_superuser and hasattr(user, 'profile') and user.profile.role == 'SCHOOL_DIRECTOR':
         if user.profile.school:
             schools_qs = schools_qs.filter(id=user.profile.school.id)
             quarters_qs = quarters_qs.filter(gattests__school_class__school=user.profile.school).distinct()
 
-    # Получаем выбранные значения из GET-запроса
-    try:
-        selected_quarter_id = int(request.GET.get('quarter', 0))
-    except (ValueError, TypeError):
-        selected_quarter_id = 0
-    
-    try:
-        selected_school_id = int(request.GET.get('school', 0))
-    except (ValueError, TypeError):
-        selected_school_id = 0
+    try: selected_quarter_id = int(request.GET.get('quarter', 0))
+    except (ValueError, TypeError): selected_quarter_id = 0
 
-    try:
-        selected_test_number = int(request.GET.get('test_number', 0))
-    except (ValueError, TypeError):
-        selected_test_number = 0
+    try: selected_school_id = int(request.GET.get('school', 0))
+    except (ValueError, TypeError): selected_school_id = 0
+
+    try: selected_test_number = int(request.GET.get('test_number', 0))
+    except (ValueError, TypeError): selected_test_number = 0
 
     context = {
-        'title': 'Анализ успеваемости',
-        'quarters': quarters_qs,
-        'schools': schools_qs,
-        'selected_quarter_id': selected_quarter_id,
-        'selected_school_id': selected_school_id,
-        'selected_test_number': selected_test_number,
-        'has_results': False,
+        'title': 'Анализ успеваемости', 'quarters': quarters_qs, 'schools': schools_qs,
+        'selected_quarter_id': selected_quarter_id, 'selected_school_id': selected_school_id,
+        'selected_test_number': selected_test_number, 'has_results': False,
     }
 
-    # --- Основная логика, если все фильтры выбраны ---
     if selected_quarter_id and selected_school_id and selected_test_number:
         results_qs = StudentResult.objects.filter(
             gat_test__quarter_id=selected_quarter_id,
@@ -286,11 +331,8 @@ def analysis_view(request):
 
         if results_qs.exists():
             subject_map = {s.id: s.name for s in Subject.objects.all()}
-            
-            # Структура для сбора данных: {class_name: {subject_name: {'correct': X, 'total': Y}}}
             agg_data = defaultdict(lambda: defaultdict(lambda: {'correct': 0, 'total': 0}))
-            
-            # Собираем сырые данные
+
             for result in results_qs:
                 class_name = result.student.school_class.name
                 for sid_str, answers in result.scores.items():
@@ -298,8 +340,7 @@ def analysis_view(request):
                     if subject_name:
                         agg_data[class_name][subject_name]['correct'] += sum(answers)
                         agg_data[class_name][subject_name]['total'] += len(answers)
-            
-            # Рассчитываем проценты и готовим данные для таблицы и графика
+
             table_data = defaultdict(dict)
             all_subjects = set()
             all_classes = sorted(agg_data.keys())
@@ -310,22 +351,27 @@ def analysis_view(request):
                     if scores['total'] > 0:
                         percentage = round((scores['correct'] / scores['total']) * 100, 1)
                         table_data[subject_name][class_name] = percentage
-            
-            sorted_subjects = sorted(list(all_subjects))
 
-            # Формируем датасеты для графика
-            chart_datasets = []
-            for class_name in all_classes:
-                dataset = {
-                    'label': class_name,
-                    'data': [table_data[subj_name].get(class_name, 0) for subj_name in sorted_subjects]
-                }
-                chart_datasets.append(dataset)
+            # --- НАЧАЛО НОВОЙ ЛОГИКИ: РЕЙТИНГ ПРЕДМЕТОВ ---
+            subject_averages = {}
+            for subject_name in all_subjects:
+                scores = [score for class_name, score in table_data[subject_name].items()]
+                if scores:
+                    subject_averages[subject_name] = round(sum(scores) / len(scores), 1)
+
+            # Сортируем предметы по их среднему баллу, чтобы получить рейтинг
+            sorted_subjects_by_avg = sorted(subject_averages.items(), key=lambda item: item[1], reverse=True)
+            subject_ranks = {subject_name: rank + 1 for rank, (subject_name, avg_score) in enumerate(sorted_subjects_by_avg)}
+            # --- КОНЕЦ НОВОЙ ЛОГИКИ ---
+
+            sorted_subjects = sorted(list(all_subjects))
+            chart_datasets = [{'label': cn, 'data': [table_data[sn].get(cn, 0) for sn in sorted_subjects]} for cn in all_classes]
 
             context.update({
-                'has_results': True,
-                'table_headers': all_classes,
+                'has_results': True, 'table_headers': all_classes,
                 'table_data': dict(sorted(table_data.items())),
+                'subject_averages': subject_averages,
+                'subject_ranks': subject_ranks, # Передаем ранги в шаблон
                 'chart_labels': json.dumps(sorted_subjects, ensure_ascii=False),
                 'chart_datasets': json.dumps(chart_datasets, ensure_ascii=False)
             })
@@ -335,17 +381,23 @@ def analysis_view(request):
 
 @login_required
 def statistics_view(request):
-    """Отображает страницу статистики с новым дизайном фильтров."""
+    """
+    Отображает страницу статистики. 
+    Все общие баллы учеников конвертируются в проценты для удобства сравнения.
+    """
     form = StatisticsFilterForm(request.GET or None, user=request.user)
     context = {'title': 'Статистика', 'form': form}
+    
     selected_school_ids = request.GET.getlist('schools')
     if selected_school_ids:
         form.fields['school_classes'].queryset = SchoolClass.objects.filter(school_id__in=selected_school_ids).order_by('name')
+
     if form.is_valid():
         selected_quarters = form.cleaned_data.get('quarters')
         selected_schools = form.cleaned_data.get('schools')
         selected_classes = form.cleaned_data.get('school_classes')
         selected_test_numbers = form.cleaned_data.get('test_numbers')
+        
         results_qs = StudentResult.objects.select_related(
             'student__school_class__school', 'student__school_class__parent', 'gat_test__quarter'
         ).all()
@@ -359,38 +411,54 @@ def statistics_view(request):
         if selected_classes: results_qs = results_qs.filter(student__school_class__in=selected_classes)
         if selected_test_numbers: results_qs = results_qs.filter(gat_test__test_number__in=selected_test_numbers)
 
-        student_scores_list, subject_scores = [], defaultdict(lambda: {'total': 0, 'correct': 0})
-        subject_map = {s.id: s.name for s in Subject.objects.all()}
-        for r in results_qs:
-            total_student_score = 0
-            if r.student and isinstance(r.scores, dict):
-                for sid, ans in r.scores.items():
-                    if isinstance(ans, list):
-                        correct = sum(i for i in ans if isinstance(i, (int, float)))
-                        total_student_score += correct
-                        s_name = subject_map.get(int(sid))
-                        if s_name:
-                            subject_scores[s_name]['correct'] += correct
-                            subject_scores[s_name]['total'] += len(ans)
-            student_scores_list.append({'student': r.student, 'score': total_student_score})
-        total_tests_taken, total_students = len(student_scores_list), results_qs.values('student').distinct().count()
-        average_score = round(sum(s['score'] for s in student_scores_list) / total_tests_taken, 1) if total_tests_taken > 0 else 0
-        pass_rate = round(sum(1 for s in student_scores_list if s['score'] > 50) / total_tests_taken * 100, 1) if total_tests_taken > 0 else 0
-        subject_perf = [{'name': name, 'percentage': round(data['correct'] / data['total'] * 100, 1) if data['total'] > 0 else 0} for name, data in subject_scores.items()]
-        top_subject = max(subject_perf, key=lambda x: x['percentage']) if subject_perf else {'name': '—', 'percentage': 0}
-        bottom_subject = min(subject_perf, key=lambda x: x['percentage']) if subject_perf else {'name': '—', 'percentage': 0}
-        subject_perf_labels = json.dumps([s['name'] for s in subject_perf], ensure_ascii=False)
-        subject_perf_data = json.dumps([s['percentage'] for s in subject_perf])
-        score_bins = defaultdict(int);
-        for s in student_scores_list:
-            bin = int(s['score'] // 10) * 10; score_bins[bin] += 1
-        distribution_labels, distribution_data = json.dumps(sorted(score_bins.keys())), json.dumps([score_bins[key] for key in sorted(score_bins.keys())])
-        
         student_class_ids = {r.student.school_class_id for r in results_qs if r.student}
         parent_class_ids = {r.student.school_class.parent_id for r in results_qs if r.student and r.student.school_class.parent_id}
         all_relevant_class_ids = student_class_ids.union(parent_class_ids)
         class_subjects_qs = ClassSubject.objects.filter(school_class_id__in=all_relevant_class_ids)
-        max_scores_map = {(cs.school_class_id, cs.subject_id): cs.number_of_questions for cs in class_subjects_qs}
+        max_questions_map = {(cs.school_class_id, cs.subject_id): cs.number_of_questions for cs in class_subjects_qs}
+
+        student_scores_list = []
+        subject_scores = defaultdict(lambda: {'total': 0, 'correct': 0})
+        subject_map = {s.id: s.name for s in Subject.objects.all()}
+
+        for r in results_qs:
+            total_student_score = 0
+            total_max_score = 0
+            
+            if r.student and isinstance(r.scores, dict):
+                for sid_str, ans in r.scores.items():
+                    sid = int(sid_str)
+                    if isinstance(ans, list):
+                        correct = sum(i for i in ans if isinstance(i, (int, float)))
+                        total_student_score += correct
+                        
+                        max_q = max_questions_map.get((r.student.school_class_id, sid))
+                        if not max_q and r.student.school_class.parent_id:
+                            max_q = max_questions_map.get((r.student.school_class.parent_id, sid))
+
+                        if max_q:
+                            total_max_score += max_q
+
+                        s_name = subject_map.get(sid)
+                        if s_name:
+                            subject_scores[s_name]['correct'] += correct
+                            subject_scores[s_name]['total'] += len(ans)
+            
+            percentage_score = (total_student_score / total_max_score) * 100 if total_max_score > 0 else 0
+            student_scores_list.append({'score': percentage_score})
+
+        total_tests_taken = len(student_scores_list)
+        total_students = results_qs.values('student').distinct().count()
+        average_score = round(sum(s['score'] for s in student_scores_list) / total_tests_taken, 1) if total_tests_taken > 0 else 0
+        pass_rate = round(sum(1 for s in student_scores_list if s['score'] >= 50) / total_tests_taken * 100, 1) if total_tests_taken > 0 else 0
+        
+        subject_perf = sorted([{'name': name, 'percentage': round(data['correct'] / data['total'] * 100, 1) if data['total'] > 0 else 0} for name, data in subject_scores.items()], key=lambda x: x['percentage'], reverse=True)
+        top_subject = subject_perf[0] if subject_perf else {'name': '—', 'percentage': 0}
+        bottom_subject = subject_perf[-1] if subject_perf else {'name': '—', 'percentage': 0}
+        
+        subject_perf_labels = json.dumps([s['name'] for s in subject_perf], ensure_ascii=False)
+        subject_perf_data = json.dumps([s['percentage'] for s in subject_perf])
+        
         per_subject_report, school_summary_report = defaultdict(lambda: defaultdict(lambda: {'scores_for_avg': [], 'grades': defaultdict(int)})), {'scores_for_avg': [], 'grades': defaultdict(int)}
         for result in results_qs:
             if not (result.student and result.student.school_class and isinstance(result.scores, dict)): continue
@@ -398,8 +466,8 @@ def statistics_view(request):
             for subject_id_str, answers in result.scores.items():
                 if not isinstance(answers, list): continue
                 subject_id, subject_name = int(subject_id_str), subject_map.get(int(subject_id_str))
-                max_score = max_scores_map.get((student_class.id, subject_id))
-                if not max_score and student_class.parent_id: max_score = max_scores_map.get((student_class.parent_id, subject_id))
+                max_score = max_questions_map.get((student_class.id, subject_id))
+                if not max_score and student_class.parent_id: max_score = max_questions_map.get((student_class.parent_id, subject_id))
                 if subject_name and max_score:
                     percentage = (sum(answers) / max_score) * 100; grade = utils.calculate_grade_from_percentage(percentage)
                     per_subject_report[subject_name][student_class.name]['scores_for_avg'].append(percentage)
@@ -428,7 +496,6 @@ def statistics_view(request):
             'has_results': True, 'average_score': average_score, 'pass_rate': pass_rate, 'total_students': total_students,
             'total_tests_taken': total_tests_taken, 'top_subject': top_subject, 'bottom_subject': bottom_subject,
             'subject_perf_labels': subject_perf_labels, 'subject_perf_data': subject_perf_data,
-            'distribution_labels': distribution_labels, 'distribution_data': distribution_data,
             'grade_distribution_report': final_grade_report, 'school_summary_report': final_school_summary,
             'grade_range': range(10, 0, -1),
         })

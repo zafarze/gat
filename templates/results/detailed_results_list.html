@@ -9,14 +9,17 @@
 <div class="flex flex-wrap justify-between items-center gap-4 mb-6 action-buttons">
     <div>
         <h1 class="text-3xl font-bold text-gray-800">{{ title }}</h1>
-        {% if students_data %}
-            {# Берем данные из первого результата для отображения информации о тесте #}
-            {% with first_student_data=students_data.0 %}
-                <p class="text-sm text-gray-500 mt-1">
-                    Тест: {{ first_student_data.result.gat_test.name }} (Класс: {{ first_student_data.result.student.school_class.name }})
-                </p>
-            {% endwith %}
-        {% endif %}
+        {% if test %}
+    <p class="text-sm text-gray-500 mt-1">
+        Тест: {{ test.name }} 
+        (Класс: 
+        {% if test.school_class.parent %}
+            {{ test.school_class.parent.name }}
+        {% else %}
+            {{ test.school_class.name }}
+        {% endif %})
+    </p>
+{% endif %}
     </div>
     <div class="flex items-center gap-3">
         <button onclick="window.print()" class="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 text-sm font-medium">Печать</button>

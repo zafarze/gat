@@ -1,5 +1,4 @@
 {% extends 'base.html' %}
-{# --- ИСПРАВЛЕНИЕ ЗДЕСЬ: ДОБАВЛЕНА ЗАГРУЗКА ФИЛЬТРОВ --- #}
 {% load custom_filters %}
 
 {% block title %}{{ title }}{% endblock %}
@@ -7,7 +6,7 @@
 {% block content %}
 <h1 class="text-3xl font-bold text-gray-800 mb-6">{{ title }}</h1>
 
-{# --- НОВАЯ, УПРОЩЕННАЯ ФОРМА ФИЛЬТРОВ --- #}
+{# --- ФОРМА ФИЛЬТРОВ --- #}
 <div class="bg-white p-6 rounded-lg shadow mb-8">
     <form method="get" id="analysis-form">
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -46,14 +45,15 @@
 
 {% if has_results %}
     <div class="grid grid-cols-1 xl:grid-cols-2 gap-8">
-        {# --- НОВЫЙ ГРАФИК --- #}
+        {# --- ГРАФИК --- #}
         <div class="bg-white p-6 rounded-lg shadow">
             <h2 class="text-xl font-bold text-gray-800 mb-4">Сравнение успеваемости классов по предметам</h2>
             <canvas id="comparisonChart"></canvas>
         </div>
-        {# --- НОВАЯ ТАБЛИЦА --- #}
+
+        {# --- ТАБЛИЦА С ИТОГАМИ И РАНГАМИ ПРЕДМЕТОВ --- #}
         <div class="bg-white shadow-md rounded-lg overflow-x-auto">
-             <h2 class="text-xl font-bold text-gray-800 p-6">Детальные данные (% правильных ответов)</h2>
+            <h2 class="text-xl font-bold text-gray-800 p-6">Детальные данные (% правильных ответов)</h2>
             <table class="min-w-full divide-y divide-gray-200">
                 <thead class="bg-gray-50">
                     <tr>
@@ -61,17 +61,28 @@
                         {% for class_name in table_headers %}
                             <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">{{ class_name }}</th>
                         {% endfor %}
+                        <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase border-l-2">Итог</th>
                     </tr>
                 </thead>
                 <tbody class="bg-white divide-y divide-gray-200">
                     {% for subject_name, class_scores in table_data.items %}
                     <tr>
-                        <td class="px-6 py-4 whitespace-nowrap font-medium text-gray-900">{{ subject_name }}</td>
+                        <td class="px-6 py-4 whitespace-nowrap font-medium text-gray-900">
+                            <span class="font-bold text-gray-500 mr-2">{{ subject_ranks|get_item:subject_name }}.</span>
+                            {{ subject_name }}
+                        </td>
+                        
                         {% for class_name in table_headers %}
-                            <td class="px-6 py-4 whitespace-nowrap text-center font-bold text-indigo-600">
-                                {{ class_scores|get_item:class_name }}%
+                            <td class="px-6 py-4 whitespace-nowrap text-center">
+                                <span class="font-bold text-base text-gray-700">
+                                    {{ class_scores|get_item:class_name|default:"—" }}%
+                                </span>
                             </td>
                         {% endfor %}
+
+                        <td class="px-6 py-4 whitespace-nowrap text-center font-bold bg-gray-50 border-l-2">
+                            {{ subject_averages|get_item:subject_name }}%
+                        </td>
                     </tr>
                     {% endfor %}
                 </tbody>

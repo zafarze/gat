@@ -5,7 +5,6 @@
 {% block title %}{{ title }}{% endblock %}
 
 {% block head %}
-{# Подключаем стили от страницы "Углубленный анализ" для фильтров #}
 <link rel="stylesheet" href="{% static 'css/deep_analysis.css' %}">
 {% endblock %}
 
@@ -40,7 +39,6 @@
                 <div class="filter-card" id="classes-filter-card" data-filter="school_classes">
                     <label class="font-bold text-gray-700 text-lg">{{ form.school_classes.label }}</label>
                     <div id="classes-chip-container" class="chip-container">
-                        {# Сюда классы будут загружаться динамически #}
                         {% if form.school_classes.queryset.exists %}
                             {% for choice in form.school_classes %}
                                 <label class="chip">{{ choice.tag }}<span>{{ choice.choice_label }}</span></label>
@@ -68,7 +66,6 @@
         </form>
     </div>
 
-    {# Если форма была отправлена, показываем результаты #}
     {% if has_results %}
         {# --- KPI КАРТОЧКИ --- #}
         <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -98,8 +95,8 @@
             </div>
             
             <div class="bg-white p-4 rounded-lg shadow">
-                <h3 class="text-sm font-medium text-gray-500">Средний балл (общий)</h3>
-                <p class="mt-1 text-2xl font-semibold text-indigo-600">{{ average_score }}</p>
+                <h3 class="text-sm font-medium text-gray-500">Средний % успеваемости</h3>
+                <p class="mt-1 text-2xl font-semibold text-indigo-600">{{ average_score }}%</p>
             </div>
             <div class="bg-white p-4 rounded-lg shadow">
                 <h3 class="text-sm font-medium text-gray-500" id="total-tests-label">Всего результатов</h3>
@@ -107,16 +104,10 @@
             </div>
         </div>
 
-        {# --- ГРАФИКИ --- #}
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            <div class="bg-white p-6 rounded-lg shadow">
-                <h3 class="text-lg font-medium leading-6 text-gray-900">Успеваемость по предметам</h3>
-                <canvas id="subjectPerfChart" class="mt-4"></canvas>
-            </div>
-            <div class="bg-white p-6 rounded-lg shadow">
-                <h3 class="text-lg font-medium leading-6 text-gray-900">Распределение баллов по ученикам</h3>
-                <canvas id="scoreDistributionChart" class="mt-4"></canvas>
-            </div>
+        {# --- ГРАФИК УСПЕВАЕМОСТИ --- #}
+        <div class="bg-white p-6 rounded-lg shadow">
+            <h3 class="text-lg font-medium leading-6 text-gray-900">Успеваемость по предметам</h3>
+            <canvas id="subjectPerformanceChart" class="mt-4"></canvas>
         </div>
 
         {# --- КАРТОЧКА: ОБЩАЯ УСПЕВАЕМОСТЬ ПО ШКОЛЕ --- #}
@@ -196,40 +187,30 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-    // --- НАЧАЛО КОДА ДЛЯ ДИНАМИЧЕСКИХ ФИЛЬТРОВ ---
+    Chart.register(ChartDataLabels);
+
     const schoolsContainer = document.querySelector('[data-filter="schools"]');
     const classesContainer = document.getElementById('classes-chip-container');
-    const classesCard = document.getElementById('classes-filter-card');
 
     const loadClassesForSchools = () => {
-        // Собираем ID всех выбранных школ
         const selectedSchoolIDs = Array.from(schoolsContainer.querySelectorAll('input:checked')).map(cb => cb.value);
-
-        // Если школы не выбраны, очищаем и сбрасываем блок с классами
         if (selectedSchoolIDs.length === 0) {
             classesContainer.innerHTML = '<p class="text-sm text-gray-500">Сначала выберите школу, чтобы увидеть классы.</p>';
             return;
         }
-        
-        // Формируем URL для API-запроса
         const url = `{% url 'api_load_subjects_and_classes' %}?school_ids[]=${selectedSchoolIDs.join('&school_ids[]=')}`;
-
-        // Делаем запрос на сервер
         fetch(url)
             .then(response => response.json())
             .then(data => {
-                classesContainer.innerHTML = ''; // Очищаем контейнер
+                classesContainer.innerHTML = '';
                 if (data.classes && data.classes.length > 0) {
-                    // Создаем новые "чипы" (checkboxes) для каждого класса
                     data.classes.forEach(cls => {
                         const label = document.createElement('label');
                         label.className = 'chip';
-                        label.innerHTML = `
-                            <input type="checkbox" name="school_classes" value="${cls.id}">
-                            <span>${cls.name}</span>
-                        `;
+                        label.innerHTML = `<input type="checkbox" name="school_classes" value="${cls.id}"><span>${cls.name}</span>`;
                         classesContainer.appendChild(label);
                     });
                 } else {
@@ -242,13 +223,10 @@ document.addEventListener('DOMContentLoaded', function () {
             });
     };
 
-    // Вешаем обработчик событий на контейнер со школами
     if (schoolsContainer) {
         schoolsContainer.addEventListener('change', loadClassesForSchools);
     }
-    // --- КОНЕЦ КОДА ДЛЯ ДИНАМИЧЕСКИХ ФИЛЬТРОВ ---
-
-    // Активируем чипы, которые были выбраны при загрузке страницы
+    
     const urlParams = new URLSearchParams(window.location.search);
     document.querySelectorAll('.filter-card').forEach(card => {
         const filterName = card.dataset.filter;
@@ -262,29 +240,46 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
-    // Отрисовка графиков
     {% if has_results %}
         try {
-            const subjectPerfLabels = {{ subject_perf_labels|safe }};
-            if (subjectPerfLabels && subjectPerfLabels.length > 0) {
-                new Chart(document.getElementById('subjectPerfChart'), {
+            const subjectPerfCtx = document.getElementById('subjectPerformanceChart').getContext('2d');
+            if (subjectPerfCtx) {
+                new Chart(subjectPerfCtx, {
                     type: 'bar',
-                    data: { labels: subjectPerfLabels, datasets: [{ label: 'Успеваемость (%)', data: {{ subject_perf_data|safe }}, backgroundColor: 'rgba(79, 70, 229, 0.8)' }] },
-                    options: { indexAxis: 'y', responsive: true, plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true, max: 100, ticks: { callback: (v) => v + '%' } } } }
+                    data: {
+                        labels: {{ subject_perf_labels|safe }},
+                        datasets: [{
+                            label: 'Успеваемость',
+                            data: {{ subject_perf_data|safe }},
+                            backgroundColor: 'rgba(99, 102, 241, 0.8)',
+                            borderColor: 'rgba(99, 102, 241, 1)',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        indexAxis: 'y',
+                        responsive: true,
+                        plugins: {
+                            legend: { display: false },
+                            datalabels: {
+                                anchor: 'end',
+                                align: 'end',
+                                formatter: (value, context) => value + '%',
+                                color: '#374151',
+                                font: { weight: 'bold' }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                beginAtZero: true,
+                                max: 100,
+                                ticks: { callback: (value) => value + "%" }
+                            }
+                        }
+                    }
                 });
             }
         } catch (e) { console.error('Ошибка отрисовки графика по предметам:', e); }
-
-        try {
-            const distributionLabels = {{ distribution_labels|safe }};
-            if (distributionLabels && distributionLabels.length > 0) {
-                new Chart(document.getElementById('scoreDistributionChart'), {
-                    type: 'bar',
-                    data: { labels: distributionLabels, datasets: [{ label: 'Количество учеников', data: {{ distribution_data|safe }}, backgroundColor: 'rgba(5, 150, 105, 0.8)' }] },
-                    options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, title: {display: true, text: 'Кол-во учеников'} }, x: { title: {display: true, text: 'Баллы'} } } }
-                });
-            }
-        } catch (e) { console.error('Ошибка отрисовки графика распределения баллов:', e); }
     {% endif %}
 });
 </script>

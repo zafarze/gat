@@ -16,11 +16,14 @@
             
             <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                 <a href="{% url 'student_progress' data.student.id %}" class="text-indigo-600 hover:text-indigo-800 hover:underline">
-                    {{ data.student.last_name }} {{ data.student.first_name }}
+                    {# ИЗМЕНЕНИЕ №1: Это исправит отображение Ф.И.О. #}
+                    {{ data.student }}
                 </a>
             </td>
             
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ data.student.school_class.name }}</td>
+            {# ИЗМЕНЕНИЕ №2: Это исправит отображение класса #}
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ data.display_class }}</td>
+
             <td class="px-6 py-4 whitespace-nowrap text-sm text-center {% if data.score1 is None %}text-red-500{% endif %}">{{ data.score1|default:"—" }}</td>
             <td class="px-6 py-4 whitespace-nowrap text-sm text-center {% if data.score2 is None %}text-red-500{% endif %}">{{ data.score2|default:"—" }}</td>
             <td class="px-6 py-4 whitespace-nowrap text-sm text-center font-bold {% if data.total_score is None %}text-gray-400{% else %}text-indigo-600{% endif %}">{{ data.total_score|default:"—" }}</td>
