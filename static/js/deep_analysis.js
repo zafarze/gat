@@ -1,20 +1,64 @@
+// D:\New_GAT\static\js\deep_analysis.js -- ПОЛНАЯ ФИНАЛЬНАЯ ВЕРСИЯ
+
 document.addEventListener('DOMContentLoaded', function () {
-    // --- ПОЛУЧЕНИЕ ДАННЫХ ИЗ HTML ---
     const analysisForm = document.getElementById('analysis-form');
-    if (!analysisForm) return; // Если формы нет на странице, ничего не делаем
+    if (!analysisForm) return;
 
-    // Получаем URL'ы и данные, переданные из Django через data-атрибуты
+    // --- НАСТРОЙКА ФИЛЬТРОВ ---
     const dynamicOptionsUrl = analysisForm.dataset.dynamicOptionsUrl;
-    const schoolsComparisonChartEl = document.getElementById('schoolsComparisonChart');
-    const overallPerformanceChartEl = document.getElementById('overallPerformanceChart');
-    const trendChartEl = document.getElementById('trendChart');
+    const schoolsContainer = document.querySelector('[data-filter="schools"]');
+    const classesContainer = document.querySelector('[data-filter="school_classes"] .chip-container');
+    const subjectsContainer = document.querySelector('[data-filter="subjects"] .chip-container');
 
-    const urlParams = new URLSearchParams(window.location.search);
+    function loadDynamicOptions() {
+        const selectedSchoolIds = Array.from(schoolsContainer.querySelectorAll('input:checked')).map(cb => cb.value);
+        
+        if (selectedSchoolIds.length === 0) {
+            classesContainer.innerHTML = '<span class="text-sm text-gray-500 p-2">Сначала выберите школу</span>';
+            subjectsContainer.innerHTML = '<span class="text-sm text-gray-500 p-2">Сначала выберите школу</span>';
+            return;
+        }
+        
+        classesContainer.innerHTML = '<span class="text-sm text-gray-500 p-2">Загрузка...</span>';
+        subjectsContainer.innerHTML = '<span class="text-sm text-gray-500 p-2">Загрузка...</span>';
+        
+        const url = `${dynamicOptionsUrl}?${selectedSchoolIds.map(id => `school_ids[]=${id}`).join('&')}`;
+        
+        fetch(url)
+            .then(response => response.json())
+            .then(data => {
+                const urlParams = new URLSearchParams(window.location.search);
+                const selectedClasses = urlParams.getAll('school_classes');
+                const selectedSubjects = urlParams.getAll('subjects');
+
+                classesContainer.innerHTML = '';
+                if (data.classes && data.classes.length > 0) {
+                    data.classes.forEach(c => {
+                        const isChecked = selectedClasses.includes(String(c.id));
+                        classesContainer.innerHTML += `<label class="chip"><input type="checkbox" name="school_classes" value="${c.id}" ${isChecked ? 'checked' : ''}><span>${c.name}</span></label>`;
+                    });
+                } else {
+                     classesContainer.innerHTML = '<span class="text-sm text-gray-500 p-2">Классы не найдены</span>';
+                }
+
+                subjectsContainer.innerHTML = '';
+                 if (data.subjects && data.subjects.length > 0) {
+                    data.subjects.forEach(s => {
+                        const isChecked = selectedSubjects.includes(String(s.id));
+                        subjectsContainer.innerHTML += `<label class="chip"><input type="checkbox" name="subjects" value="${s.id}" ${isChecked ? 'checked' : ''}><span>${s.name}</span></label>`;
+                    });
+                } else {
+                    subjectsContainer.innerHTML = '<span class="text-sm text-gray-500 p-2">Предметы не найдены</span>';
+                }
+            });
+    }
     
-    // --- ЛОГИКА ДЛЯ ФИЛЬТРОВ ---
-    // Инициализация начальных значений фильтров из URL
+    // 1. Сначала отмечаем статичные фильтры из URL
+    const urlParams = new URLSearchParams(window.location.search);
     document.querySelectorAll('.filter-card').forEach(card => {
         const filterName = card.dataset.filter;
+        if (filterName === 'school_classes' || filterName === 'subjects') return;
+
         const paramValues = urlParams.getAll(filterName);
         if (paramValues.length > 0) {
             card.querySelectorAll('input[type="checkbox"]').forEach(cb => {
@@ -25,47 +69,13 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
-    // Динамическая загрузка Классов и Предметов
-    const schoolsContainer = document.querySelector('[data-filter="schools"]');
-    const classesContainer = document.querySelector('[data-filter="school_classes"] .chip-container');
-    const subjectsContainer = document.querySelector('[data-filter="subjects"] .chip-container');
-    
-    const selectedClasses = urlParams.getAll('school_classes');
-    const selectedSubjects = urlParams.getAll('subjects');
-
-    function loadDynamicOptions() {
-        const selectedSchoolIds = Array.from(schoolsContainer.querySelectorAll('input:checked')).map(cb => cb.value);
-        if (selectedSchoolIds.length === 0) {
-            classesContainer.innerHTML = '<span class="text-sm text-gray-500 p-2">Сначала выберите школу</span>';
-            subjectsContainer.innerHTML = '<span class="text-sm text-gray-500 p-2">Сначала выберите школу</span>';
-            return;
-        }
-        
-        classesContainer.innerHTML = '<span class="text-sm text-gray-500 p-2">Загрузка...</span>';
-        subjectsContainer.innerHTML = '<span class="text-sm text-gray-500 p-2">Загрузка...</span>';
-        
-        // Используем URL из data-атрибута
-        const url = `${dynamicOptionsUrl}?${selectedSchoolIds.map(id => `school_ids[]=${id}`).join('&')}`;
-        fetch(url)
-            .then(response => response.json())
-            .then(data => {
-                classesContainer.innerHTML = '';
-                data.classes.forEach(c => {
-                    const isChecked = selectedClasses.includes(String(c.id));
-                    classesContainer.innerHTML += `<label class="chip"><input type="checkbox" name="school_classes" value="${c.id}" ${isChecked ? 'checked' : ''}><span>${c.name}</span></label>`;
-                });
-                subjectsContainer.innerHTML = '';
-                data.subjects.forEach(s => {
-                    const isChecked = selectedSubjects.includes(String(s.id));
-                    subjectsContainer.innerHTML += `<label class="chip"><input type="checkbox" name="subjects" value="${s.id}" ${isChecked ? 'checked' : ''}><span>${s.name}</span></label>`;
-                });
-            });
-    }
-    
+    // 2. Привязываем обработчик на изменение школ
     schoolsContainer.addEventListener('change', loadDynamicOptions);
+    
+    // 3. Запускаем загрузку динамических полей (классов и предметов)
     loadDynamicOptions();
 
-    // Поиск по фильтрам
+    // --- ПОИСК ПО ФИЛЬТРАМ ---
     document.querySelectorAll('.filter-search').forEach(input => {
         input.addEventListener('keyup', () => {
             const query = input.value.toLowerCase();
@@ -141,22 +151,38 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     // --- ЛОГИКА ДЛЯ ОТРИСОВКИ ГРАФИКОВ ---
+    const schoolsComparisonChartEl = document.getElementById('schoolsComparisonChart');
+    const overallPerformanceChartEl = document.getElementById('overallPerformanceChart');
+    const trendChartEl = document.getElementById('trendChart');
+    
     if (schoolsComparisonChartEl && schoolsComparisonChartEl.dataset.chartData) {
         Chart.register(ChartDataLabels);
         
-        // 1. Сравнение школ (вертикальный столбчатый)
+        // 1. Сравнение школ (Столбчатая диаграмма) - ИЗМЕНЕНО
         new Chart(schoolsComparisonChartEl, {
-            type: 'bar',
+            type: 'bar', // ИЗМЕНЕНО с 'radar' на 'bar'
             data: JSON.parse(schoolsComparisonChartEl.dataset.chartData),
             options: {
                 responsive: true,
                 plugins: {
                     legend: { position: 'top' },
                     title: { display: false },
-                    datalabels: { display: false }
+                    datalabels: { // Добавляем метки для наглядности
+                        anchor: 'end',
+                        align: 'top',
+                        formatter: (value) => value + '%',
+                        color: '#4b5563',
+                        font: { weight: 'bold' }
+                    }
                 },
-                scales: {
-                    y: { beginAtZero: true, max: 100, ticks: { callback: (v) => v + '%' } }
+                scales: { // Стандартные оси для столбчатой диаграммы
+                    y: {
+                        beginAtZero: true,
+                        max: 100,
+                        ticks: {
+                            callback: (v) => v + '%'
+                        }
+                    }
                 }
             }
         });
@@ -194,7 +220,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 options: {
                     responsive: true,
                     plugins: { legend: { position: 'top' }, datalabels: { display: false } },
-                    scales: { y: { beginAtZero: true, max: 100 } }
+                    scales: { y: { beginAtZero: true, max: 100, ticks: { callback: (v) => v + '%' } } }
                 }
             });
         }

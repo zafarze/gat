@@ -123,7 +123,7 @@
         <div id="summary" class="tab-content active">
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 <div class="bg-white p-6 rounded-2xl shadow-md">
-                    <h3 class="text-xl font-bold text-gray-800 mb-4">Сравнение школ по предметам</h3>
+                    <h3 class="text-xl font-bold text-gray-800 mb-4">Сравнение по предметам</h3>
                     <canvas id="schoolsComparisonChart" 
                             data-chart-data='{{ radar_chart_data|safe }}'></canvas>
                 </div>
@@ -136,92 +136,91 @@
         </div>
 
         <div id="heatmap" class="tab-content">
-    {% for subject, data in heatmap_data.items %}
-        <div class="mb-10 bg-white p-6 rounded-2xl shadow-md">
-            <h3 class="text-xl font-bold text-gray-800 mb-4">{{ subject }}</h3>
-            <div class="overflow-x-auto rounded-xl shadow-sm">
-                <table class="heatmap-table">
-                    <thead>
-                        <tr>
-                            <th class="rounded-tl-xl">Школа/Вопрос</th>
-                            {% for q_num in data.questions %}<th>{{ q_num }}</th>{% endfor %}
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for school_name, questions_data in data.schools.items %}
-                        <tr>
-                            <td class="font-semibold text-left p-3 bg-gray-50">{{ school_name }}</td>
-                            {% for q_num in data.questions %}
-                                {% with cell_data=questions_data|get_item:q_num|default:None %}
-                                    <td title="Правильно: {{ cell_data.correct }}/{{ cell_data.total }} ({{ cell_data.percentage }}%)" 
-                                        style="background-color: {% with p_val=cell_data.percentage|default:-1 %}{% if p_val >= 80 %}#dcfce7{% elif p_val >= 50 %}#fef9c3{% elif p_val >= 0 %}#fee2e2{% else %}#f3f4f6{% endif %}{% endwith %}; padding: 0.5rem;">
-                                        
-                                        {% if cell_data is not None %}
-                                            <div class="flex flex-col items-center leading-tight">
-                                                <span class="font-bold text-base">{{ cell_data.percentage }}%</span>
-                                                <span class="text-xs text-gray-500 mt-1">{{ cell_data.correct }}/{{ cell_data.total }}</span>
-                                            </div>
-                                        {% else %}
-                                            —
-                                        {% endif %}
-                                    </td>
-                                {% endwith %}
-                            {% endfor %}
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-
-            {# --- НОВЫЙ БЛОК С ИТОГАМИ --- #}
-            {% with summary=heatmap_summary|get_item:subject %}
-                {% if summary %}
-                <div class="mt-6 p-4 bg-gray-50 rounded-lg border">
-                    <h4 class="font-bold text-lg mb-3 text-gray-700">Итоги по предмету: {{ subject }}</h4>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div>
-                            <h5 class="font-semibold mb-2">Рейтинг школ:</h5>
-                            <ul class="space-y-2">
-                                {% for school_stat in summary.ranking %}
-                                <li class="flex justify-between items-center p-2 rounded-md {% if forloop.first %}bg-green-100 border border-green-200{% elif forloop.last and summary.ranking|length > 1 %}bg-red-100 border border-red-200{% else %}bg-gray-100{% endif %}">
-                                    <span>
-                                        <span class="font-bold mr-2">{{ forloop.counter }}.</span>
-                                        {{ school_stat.school }}
-                                    </span>
-                                    <span class="font-bold text-lg">{{ school_stat.avg }}%</span>
-                                </li>
+            {% for subject, data in heatmap_data.items %}
+                <div class="mb-10 bg-white p-6 rounded-2xl shadow-md">
+                    <h3 class="text-xl font-bold text-gray-800 mb-4">{{ subject }}</h3>
+                    <div class="overflow-x-auto rounded-xl shadow-sm">
+                        <table class="heatmap-table">
+                            <thead>
+                                <tr>
+                                    <th class="rounded-tl-xl">Школа/Вопрос</th>
+                                    {% for q_num in data.questions %}<th>{{ q_num }}</th>{% endfor %}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for school_name, questions_data in data.schools.items %}
+                                <tr>
+                                    <td class="font-semibold text-left p-3 bg-gray-50">{{ school_name }}</td>
+                                    {% for q_num in data.questions %}
+                                        {% with cell_data=questions_data|get_item:q_num|default:None %}
+                                            <td title="Правильно: {{ cell_data.correct }}/{{ cell_data.total }} ({{ cell_data.percentage }}%)" 
+                                                style="background-color: {% with p_val=cell_data.percentage|default:-1 %}{% if p_val >= 80 %}#dcfce7{% elif p_val >= 50 %}#fef9c3{% elif p_val >= 0 %}#fee2e2{% else %}#f3f4f6{% endif %}{% endwith %}; padding: 0.5rem;">
+                                                
+                                                {% if cell_data is not None %}
+                                                    <div class="flex flex-col items-center leading-tight">
+                                                        <span class="font-bold text-base">{{ cell_data.percentage }}%</span>
+                                                        <span class="text-xs text-gray-500 mt-1">{{ cell_data.correct }}/{{ cell_data.total }}</span>
+                                                    </div>
+                                                {% else %}
+                                                    —
+                                                {% endif %}
+                                            </td>
+                                        {% endwith %}
+                                    {% endfor %}
+                                </tr>
                                 {% endfor %}
-                            </ul>
-                        </div>
-                        {% if summary.ranking %}
-                        <div>
-                            <h5 class="font-semibold mb-2">Ключевые выводы:</h5>
-                            <ul class="list-disc list-inside space-y-2 text-gray-600">
-                                <li>Средний процент по всем школам: <strong class="text-gray-800">{{ summary.overall_avg }}%</strong>.</li>
-                                {% if summary.ranking|length > 1 %}
-                                    {% with leader=summary.ranking.0 outsider=summary.ranking|last %}
-                                        <li>
-                                            Лидер <strong class="text-green-600">{{ leader.school }}</strong> опережает <strong class="text-red-600">{{ outsider.school }}</strong> на 
-                                            <strong class="text-indigo-600">{{ summary.difference }}%</strong>.
+                            </tbody>
+                        </table>
+                    </div>
+
+                    {% with summary=heatmap_summary|get_item:subject %}
+                        {% if summary %}
+                        <div class="mt-6 p-4 bg-gray-50 rounded-lg border">
+                            <h4 class="font-bold text-lg mb-3 text-gray-700">Итоги по предмету: {{ subject }}</h4>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                    <h5 class="font-semibold mb-2">Рейтинг:</h5>
+                                    <ul class="space-y-2">
+                                        {% for school_stat in summary.ranking %}
+                                        <li class="flex justify-between items-center p-2 rounded-md {% if forloop.first %}bg-green-100 border border-green-200{% elif forloop.last and summary.ranking|length > 1 %}bg-red-100 border border-red-200{% else %}bg-gray-100{% endif %}">
+                                            <span>
+                                                <span class="font-bold mr-2">{{ forloop.counter }}.</span>
+                                                {{ school_stat.school }}
+                                            </span>
+                                            <span class="font-bold text-lg">{{ school_stat.avg }}%</span>
                                         </li>
-                                    {% endwith %}
+                                        {% endfor %}
+                                    </ul>
+                                </div>
+                                {% if summary.ranking %}
+                                <div>
+                                    <h5 class="font-semibold mb-2">Ключевые выводы:</h5>
+                                    <ul class="list-disc list-inside space-y-2 text-gray-600">
+                                        <li>Средний процент по всем: <strong class="text-gray-800">{{ summary.overall_avg }}%</strong>.</li>
+                                        {% if summary.ranking|length > 1 %}
+                                            {% with leader=summary.ranking.0 outsider=summary.ranking|last %}
+                                                <li>
+                                                    Лидер <strong class="text-green-600">{{ leader.school }}</strong> опережает <strong class="text-red-600">{{ outsider.school }}</strong> на 
+                                                    <strong class="text-indigo-600">{{ summary.difference }}%</strong>.
+                                                </li>
+                                            {% endwith %}
+                                        {% endif %}
+                                        {% if summary.easiest %}
+                                        <li>Самый легкий вопрос: <strong>№{{ summary.easiest.0.q_num }}</strong> ({{ summary.easiest.0.percentage }}% верных ответов).</li>
+                                        {% endif %}
+                                        {% if summary.hardest %}
+                                        <li>Самый сложный вопрос: <strong>№{{ summary.hardest.0.q_num }}</strong> ({{ summary.hardest.0.percentage }}% верных ответов).</li>
+                                        {% endif %}
+                                    </ul>
+                                </div>
                                 {% endif %}
-                                {% if summary.easiest %}
-                                <li>Самый легкий вопрос: <strong>№{{ summary.easiest.0.q_num }}</strong> ({{ summary.easiest.0.percentage }}% верных ответов).</li>
-                                {% endif %}
-                                {% if summary.hardest %}
-                                <li>Самый сложный вопрос: <strong>№{{ summary.hardest.0.q_num }}</strong> ({{ summary.hardest.0.percentage }}% верных ответов).</li>
-                                {% endif %}
-                            </ul>
+                            </div>
                         </div>
                         {% endif %}
-                    </div>
+                    {% endwith %}
                 </div>
-                {% endif %}
-            {% endwith %}
+            {% endfor %}
         </div>
-    {% endfor %}
-    </div>
 
         {% if trend_chart_data %}
         <div id="trends" class="tab-content">
@@ -270,12 +269,14 @@
                     <div class="space-y-3 max-h-96 overflow-y-auto pr-2">
                         {% for student in at_risk_students %}
                         <div class="risk-student-card">
-                            <div class="flex justify-between items-center">
-                                <div>
-                                    <span class="font-bold text-gray-800">{{ student.name }}</span>
-                                    <span class="text-gray-600 text-sm ml-2">({{ student.class }})</span>
-                                </div>
-                                <span class="text-red-600 font-bold">{{ student.score }}%</span>
+                            <div class="flex justify-between items-center mb-1">
+                                <span class="font-bold text-gray-800">{{ student.name }}</span>
+                                <span class="text-red-600 font-bold text-lg">{{ student.score }}%</span>
+                            </div>
+                            <div class="text-sm text-gray-500">
+                                <span>{{ student.school }}</span>,
+                                <span class="font-medium text-gray-600">{{ student.class }}</span>
+                                <span>- Предмет: <strong class="text-indigo-600">{{ student.subject }}</strong></span>
                             </div>
                         </div>
                         {% endfor %}

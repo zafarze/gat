@@ -197,22 +197,38 @@ document.addEventListener('DOMContentLoaded', function () {
 
     const loadClassesForSchools = () => {
         const selectedSchoolIDs = Array.from(schoolsContainer.querySelectorAll('input:checked')).map(cb => cb.value);
+        
         if (selectedSchoolIDs.length === 0) {
             classesContainer.innerHTML = '<p class="text-sm text-gray-500">Сначала выберите школу, чтобы увидеть классы.</p>';
             return;
         }
+
         const url = `{% url 'api_load_subjects_and_classes' %}?school_ids[]=${selectedSchoolIDs.join('&school_ids[]=')}`;
+        
         fetch(url)
             .then(response => response.json())
             .then(data => {
                 classesContainer.innerHTML = '';
                 if (data.classes && data.classes.length > 0) {
+                    // Шаг 1: Создаем все чекбоксы для классов
                     data.classes.forEach(cls => {
                         const label = document.createElement('label');
                         label.className = 'chip';
                         label.innerHTML = `<input type="checkbox" name="school_classes" value="${cls.id}"><span>${cls.name}</span>`;
                         classesContainer.appendChild(label);
                     });
+
+                    // Шаг 2: Теперь, когда чекбоксы существуют, отмечаем нужные
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const classParamValues = urlParams.getAll('school_classes');
+                    if (classParamValues.length > 0) {
+                        classesContainer.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+                            if (classParamValues.includes(cb.value)) {
+                                cb.checked = true;
+                            }
+                        });
+                    }
+
                 } else {
                     classesContainer.innerHTML = '<p class="text-sm text-gray-500">Для выбранных школ классы не найдены.</p>';
                 }
@@ -223,13 +239,13 @@ document.addEventListener('DOMContentLoaded', function () {
             });
     };
 
-    if (schoolsContainer) {
-        schoolsContainer.addEventListener('change', loadClassesForSchools);
-    }
-    
+    // Отмечаем статичные фильтры (Четверти, Школы, Тесты) при загрузке страницы
     const urlParams = new URLSearchParams(window.location.search);
     document.querySelectorAll('.filter-card').forEach(card => {
         const filterName = card.dataset.filter;
+        // Пропускаем динамический фильтр классов, так как мы обрабатываем его отдельно
+        if (filterName === 'school_classes') return; 
+
         const paramValues = urlParams.getAll(filterName);
         if (paramValues.length > 0) {
             card.querySelectorAll('input[type="checkbox"]').forEach(cb => {
@@ -240,6 +256,14 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
+    // Добавляем "слушатель" на клики
+    if (schoolsContainer) {
+        schoolsContainer.addEventListener('change', loadClassesForSchools);
+    }
+    
+    // Вызываем функцию один раз при загрузке страницы
+    loadClassesForSchools();
+    
     {% if has_results %}
         try {
             const subjectPerfCtx = document.getElementById('subjectPerformanceChart').getContext('2d');

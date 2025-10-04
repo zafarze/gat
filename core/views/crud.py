@@ -1,4 +1,4 @@
-# D:\New_GAT\core\views\crud.py (ПОЛНАЯ И ОБНОВЛЕННАЯ ВЕРСИЯ)
+# D:\New_GAT\core\views\crud.py (ФИНАЛЬНАЯ ВЕРСИЯ С ПРАВАМИ ДОСТУПА)
 
 from collections import defaultdict
 from django.shortcuts import render, redirect, get_object_or_404
@@ -9,23 +9,20 @@ from django.views.generic import ListView, CreateView, UpdateView, DeleteView
 from django.urls import reverse_lazy
 from django.db.models import Count
 
-# Обновленный блок импортов моделей
 from ..models import (
     AcademicYear, Quarter, School, SchoolClass, Subject,
     ClassSubject, GatTest, Student, TeacherNote
 )
-# Обновленный блок импортов форм
 from ..forms import (
     AcademicYearForm, QuarterForm, SchoolForm, SchoolClassForm, SubjectForm,
     ClassSubjectForm, GatTestForm, TeacherNoteForm
 )
+from .permissions import get_accessible_schools # <--- Подключаем нашу "умную" функцию
 
 
-# --- ACADEMIC YEAR ---
+# --- ACADEMIC YEAR, QUARTER (без изменений) ---
 class AcademicYearListView(LoginRequiredMixin, ListView):
-    model = AcademicYear
-    template_name = 'years/list.html'
-    context_object_name = 'items'
+    model = AcademicYear; template_name = 'years/list.html'; context_object_name = 'items'
     extra_context = {'title': 'Учебные Годы', 'add_url': 'year_add', 'edit_url': 'year_edit', 'delete_url': 'year_delete'}
 
 class AcademicYearCreateView(LoginRequiredMixin, CreateView):
@@ -40,8 +37,6 @@ class AcademicYearDeleteView(LoginRequiredMixin, DeleteView):
     model = AcademicYear; template_name = 'years/confirm_delete.html'; success_url = reverse_lazy('year_list')
     extra_context = {'title': 'Удалить Учебный Год', 'cancel_url': 'year_list'}
 
-
-# --- QUARTER ---
 class QuarterListView(LoginRequiredMixin, ListView):
     model = Quarter; template_name = 'quarters/list.html'; context_object_name = 'items'
     extra_context = {'title': 'Четверти', 'add_url': 'quarter_add', 'edit_url': 'quarter_edit', 'delete_url': 'quarter_delete'}
@@ -59,10 +54,29 @@ class QuarterDeleteView(LoginRequiredMixin, DeleteView):
     extra_context = {'title': 'Удалить Четверть', 'cancel_url': 'quarter_list'}
 
 
-# --- SCHOOL ---
+# --- SCHOOL (ВАЖНОЕ ИЗМЕНЕНИЕ) ---
 class SchoolListView(LoginRequiredMixin, ListView):
-    model = School; template_name = 'schools/list.html'; context_object_name = 'items'
-    extra_context = {'title': 'Школы', 'add_url': 'school_add', 'edit_url': 'school_edit', 'delete_url': 'school_delete'}
+    model = School
+    template_name = 'schools/list.html'
+    context_object_name = 'items'
+    
+    def get_queryset(self):
+        queryset = super().get_queryset().order_by('name')
+        # Если пользователь не администратор, фильтруем школы
+        if not self.request.user.is_superuser:
+            accessible_schools = get_accessible_schools(self.request.user)
+            queryset = queryset.filter(id__in=accessible_schools.values_list('id', flat=True))
+        return queryset
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['title'] = 'Школы'
+        # Директору не даем права добавлять/редактировать/удалять школы
+        if self.request.user.is_superuser:
+            context['add_url'] = 'school_add'
+            context['edit_url'] = 'school_edit'
+            context['delete_url'] = 'school_delete'
+        return context
 
 class SchoolCreateView(LoginRequiredMixin, CreateView):
     model = School; form_class = SchoolForm; template_name = 'schools/form.html'; success_url = reverse_lazy('school_list')
@@ -77,31 +91,36 @@ class SchoolDeleteView(LoginRequiredMixin, DeleteView):
     extra_context = {'title': 'Удалить Школу', 'cancel_url': 'school_list'}
 
 
-# --- SCHOOL CLASS ---
+# --- SCHOOL CLASS (ВАЖНОЕ ИЗМЕНЕНИЕ) ---
 class SchoolClassListView(LoginRequiredMixin, ListView):
     model = School
     template_name = 'classes/list.html'
     context_object_name = 'schools'
-    extra_context = {
-        'title': 'Классы по школам',
-        'add_url': 'class_add',
-        'edit_url': 'class_edit',
-        'delete_url': 'class_delete'
-    }
+    
     def get_queryset(self):
-        return School.objects.prefetch_related('classes').order_by('name')
+        queryset = School.objects.prefetch_related('classes').order_by('name')
+        if not self.request.user.is_superuser:
+            accessible_schools = get_accessible_schools(self.request.user)
+            queryset = queryset.filter(id__in=accessible_schools.values_list('id', flat=True))
+        return queryset
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['title'] = 'Классы по школам'
+        # Показываем кнопки только администратору
+        if self.request.user.is_superuser:
+            context['add_url'] = 'class_add'
+            context['edit_url'] = 'class_edit'
+            context['delete_url'] = 'class_delete'
+        return context
 
 class SchoolClassCreateView(LoginRequiredMixin, CreateView):
-    model = SchoolClass
-    form_class = SchoolClassForm
-    template_name = 'classes/form.html'
-    success_url = reverse_lazy('class_list')
+    model = SchoolClass; form_class = SchoolClassForm; template_name = 'classes/form.html'; success_url = reverse_lazy('class_list')
     extra_context = {'title': 'Добавить Класс', 'cancel_url': 'class_list'}
     def get_initial(self):
         initial = super().get_initial()
         school_id = self.request.GET.get('school')
-        if school_id:
-            initial['school'] = school_id
+        if school_id: initial['school'] = school_id
         return initial
 
 class SchoolClassUpdateView(LoginRequiredMixin, UpdateView):
@@ -113,32 +132,28 @@ class SchoolClassDeleteView(LoginRequiredMixin, DeleteView):
     extra_context = {'title': 'Удалить Класс', 'cancel_url': 'class_list'}
 
 
-# --- SUBJECT ---
+# --- SUBJECT (ВАЖНОЕ ИЗМЕНЕНИЕ) ---
 @login_required
 def subject_list_view(request):
-    """Отображает список предметов, сгруппированных по школам."""
-    schools_with_subjects = School.objects.prefetch_related('subjects').order_by('name')
-    context = {
-        'title': 'Предметы по школам',
-        'schools_with_subjects': schools_with_subjects,
-        'add_url_name': 'subject_add'
-    }
+    schools_qs = School.objects.prefetch_related('subjects').order_by('name')
+    if not request.user.is_superuser:
+        accessible_schools = get_accessible_schools(request.user)
+        schools_qs = schools_qs.filter(id__in=accessible_schools.values_list('id', flat=True))
+    
+    context = {'title': 'Предметы по школам', 'schools_with_subjects': schools_qs}
+    if request.user.is_superuser:
+        context['add_url_name'] = 'subject_add'
     return render(request, 'subjects/list.html', context)
 
 class SubjectCreateView(LoginRequiredMixin, CreateView):
-    model = Subject
-    form_class = SubjectForm
-    template_name = 'subjects/form.html'
-    success_url = reverse_lazy('subject_list')
+    model = Subject; form_class = SubjectForm; template_name = 'subjects/form.html'; success_url = reverse_lazy('subject_list')
     extra_context = {'title': 'Добавить Предмет', 'cancel_url': 'subject_list'}
     def get_initial(self):
         initial = super().get_initial()
         school_id = self.request.GET.get('school')
         if school_id:
-            try:
-                initial['school'] = School.objects.get(pk=school_id)
-            except School.DoesNotExist:
-                pass
+            try: initial['school'] = School.objects.get(pk=school_id)
+            except School.DoesNotExist: pass
         return initial
 
 class SubjectUpdateView(LoginRequiredMixin, UpdateView):
@@ -150,12 +165,27 @@ class SubjectDeleteView(LoginRequiredMixin, DeleteView):
     extra_context = {'title': 'Удалить Предмет', 'cancel_url': 'subject_list'}
 
 
-# --- CLASS SUBJECT ---
+# --- CLASS SUBJECT (ВАЖНОЕ ИЗМЕНЕНИЕ) ---
 class ClassSubjectListView(LoginRequiredMixin, ListView):
-    model = SchoolClass; template_name = 'class_subjects/list.html'; context_object_name = 'classes'
-    extra_context = {'title': 'Учебный план', 'add_url': 'class_subject_add', 'edit_url': 'class_subject_edit', 'delete_url': 'class_subject_delete'}
+    model = SchoolClass
+    template_name = 'class_subjects/list.html'
+    context_object_name = 'classes'
+
     def get_queryset(self):
-        return SchoolClass.objects.annotate(num_subjects=Count('subjects')).filter(num_subjects__gt=0).prefetch_related('classsubject_set__subject').order_by('school__name', 'name')
+        queryset = SchoolClass.objects.annotate(num_subjects=Count('subjects')).filter(num_subjects__gt=0).prefetch_related('classsubject_set__subject').order_by('school__name', 'name')
+        if not self.request.user.is_superuser:
+            accessible_schools = get_accessible_schools(self.request.user)
+            queryset = queryset.filter(school__in=accessible_schools)
+        return queryset
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['title'] = 'Учебный план'
+        if self.request.user.is_superuser:
+            context['add_url'] = 'class_subject_add'
+            context['edit_url'] = 'class_subject_edit'
+            context['delete_url'] = 'class_subject_delete'
+        return context
 
 class ClassSubjectCreateView(LoginRequiredMixin, CreateView):
     model = ClassSubject; form_class = ClassSubjectForm; template_name = 'class_subjects/form.html'; success_url = reverse_lazy('class_subject_list')
@@ -170,22 +200,24 @@ class ClassSubjectDeleteView(LoginRequiredMixin, DeleteView):
     extra_context = {'title': 'Удалить предмет из класса', 'cancel_url': 'class_subject_list'}
 
 
-# --- GAT TEST ---
+# --- GAT TEST (ВАЖНОЕ ИЗМЕНЕНИЕ) ---
 @login_required
 def gat_test_list_view(request):
-    """Отображает список GAT тестов, сгруппированных по школам."""
     grouped_tests = defaultdict(list)
-    tests = GatTest.objects.select_related('school_class__school', 'quarter').prefetch_related('subjects').order_by('school_class__school__name', 'name')
-    for test in tests:
+    tests_qs = GatTest.objects.select_related('school_class__school', 'quarter').prefetch_related('subjects').order_by('school_class__school__name', 'name')
+    
+    if not request.user.is_superuser:
+        accessible_schools = get_accessible_schools(request.user)
+        tests_qs = tests_qs.filter(school_class__school__in=accessible_schools)
+
+    for test in tests_qs:
         grouped_tests[test.school_class.school].append(test)
 
-    context = {
-        'grouped_tests': dict(grouped_tests),
-        'title': 'GAT Тесты',
-        'add_url': 'gat_test_add',
-        'edit_url': 'gat_test_edit',
-        'delete_url': 'gat_test_delete',
-    }
+    context = {'grouped_tests': dict(grouped_tests), 'title': 'GAT Тесты'}
+    if request.user.is_superuser:
+        context['add_url'] = 'gat_test_add'
+        context['edit_url'] = 'gat_test_edit'
+        context['delete_url'] = 'gat_test_delete'
     return render(request, 'gat_tests/list.html', context)
 
 class GatTestCreateView(LoginRequiredMixin, CreateView):
@@ -213,25 +245,17 @@ def gat_test_delete_results_view(request, pk):
     return render(request, 'results/confirm_delete_batch.html', context)
 
 
-# --- TEACHER NOTE ---
-
+# --- TEACHER NOTE (без изменений) ---
 class TeacherNoteCreateView(LoginRequiredMixin, CreateView):
-    model = TeacherNote
-    form_class = TeacherNoteForm
-    template_name = 'notes/form.html'
-
+    model = TeacherNote; form_class = TeacherNoteForm; template_name = 'notes/form.html'
     def form_valid(self, form):
-        # Привязываем заметку к студенту и автору
         student = get_object_or_404(Student, pk=self.kwargs['student_pk'])
         form.instance.student = student
         form.instance.author = self.request.user
         messages.success(self.request, "Заметка успешно добавлена.")
         return super().form_valid(form)
-
     def get_success_url(self):
-        # Возвращаемся на страницу прогресса студента
         return reverse_lazy('student_progress', kwargs={'student_id': self.kwargs['student_pk']})
-
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['student'] = get_object_or_404(Student, pk=self.kwargs['student_pk'])
@@ -239,16 +263,11 @@ class TeacherNoteCreateView(LoginRequiredMixin, CreateView):
         return context
 
 class TeacherNoteDeleteView(LoginRequiredMixin, DeleteView):
-    model = TeacherNote
-    template_name = 'notes/confirm_delete.html'
-
+    model = TeacherNote; template_name = 'notes/confirm_delete.html'
     def get_success_url(self):
         messages.success(self.request, "Заметка успешно удалена.")
-        # self.object здесь - это удаляемый объект TeacherNote
         return reverse_lazy('student_progress', kwargs={'student_id': self.object.student.pk})
-
     def get_queryset(self):
-        # Пользователь может удалять только свои заметки (или все, если он суперюзер)
         qs = super().get_queryset()
         if not self.request.user.is_superuser:
             return qs.filter(author=self.request.user)

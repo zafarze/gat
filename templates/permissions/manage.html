@@ -1,0 +1,100 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="flex justify-between items-center mb-6">
+    <h1 class="text-3xl font-bold text-gray-800">{{ title }}</h1>
+    </div>
+
+<div class="space-y-6">
+    {% for director in directors %}
+        <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-200 hover:shadow-md transition-shadow duration-300">
+            
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center pb-4 border-b border-gray-100">
+                <div>
+                    <h2 class="text-xl font-bold text-gray-800">{{ director.get_full_name|default:director.username }}</h2>
+                    <p class="text-sm text-gray-500 mt-1">
+                        <span class="font-medium">Основная школа:</span> {{ director.profile.school.name|default:"Не указана" }}
+                    </p>
+                </div>
+            </div>
+
+            <div class="pt-5">
+                <h3 class="text-base font-semibold text-gray-600 mb-4">Дополнительный доступ к школам:</h3>
+                
+                {% if all_schools|length > 1 %}
+                    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-6 gap-y-4">
+                        {% for school in all_schools %}
+                            {# Не показываем переключатель для основной школы директора #}
+                            {% if director.profile.school and school.id != director.profile.school.id %}
+                                <label class="inline-flex items-center cursor-pointer p-2 rounded-lg hover:bg-gray-50 transition-colors">
+                                    <input type="checkbox"
+                                           class="sr-only peer"
+                                           data-director-id="{{ director.id }}"
+                                           data-school-id="{{ school.id }}"
+                                           {% if school in director.profile.additional_schools.all %}checked{% endif %}>
+                                    <div class="relative w-11 h-6 bg-gray-200 rounded-full peer peer-focus:ring-2 peer-focus:ring-indigo-300 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                                    <span class="ms-3 text-sm font-medium text-gray-700">{{ school.name }}</span>
+                                </label>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="text-sm text-gray-400">Нет других школ для предоставления доступа.</p>
+                {% endif %}
+            </div>
+        </div>
+    {% empty %}
+        <div class="text-center py-12 bg-white rounded-lg shadow-sm">
+            <p class="text-gray-500">В системе не найдено пользователей с ролью "Директор Школы".</p>
+        </div>
+    {% endfor %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const toggles = document.querySelectorAll('input[type="checkbox"][data-director-id]');
+    
+    toggles.forEach(toggle => {
+        toggle.addEventListener('change', (event) => {
+            const directorId = event.target.dataset.directorId;
+            const schoolId = event.target.dataset.schoolId;
+            
+            const formData = new FormData();
+            formData.append('director_id', directorId);
+            formData.append('school_id', schoolId);
+            formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+
+            fetch("{% url 'api_toggle_access' %}", {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.status !== 'success') {
+                    console.error('API Error:', data.message);
+                    event.target.checked = !event.target.checked; // Возвращаем обратно в случае ошибки
+                    alert('Произошла ошибка при изменении прав доступа.');
+                }
+            })
+            .catch(error => {
+                console.error('Network Error:', error);
+                event.target.checked = !event.target.checked;
+                alert('Сетевая ошибка. Не удалось сохранить изменения.');
+            });
+        });
+    });
+});
+</script>
+{% endblock %}

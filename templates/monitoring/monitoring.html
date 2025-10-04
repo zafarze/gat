@@ -167,7 +167,6 @@
 
 {% block scripts %}
     <style>
-        /* Стили для печати остаются без изменений */
         @media print {
             body { background-color: white !important; }
             aside, header, .action-buttons, .no-print, form, .glass-card { display: none !important; }
@@ -183,7 +182,6 @@
     <script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
     
     <script>
-        // --- ЛОГИКА ПЕРЕКЛЮЧЕНИЯ ЯЗЫКОВ (без изменений) ---
         const translations = {
             ru: {
                 monitoringTitle: 'Мониторинг', monitoringSubtitle: 'Используйте фильтры для поиска и анализа данных',
@@ -244,87 +242,76 @@
 
         document.addEventListener('DOMContentLoaded', function () {
             
-            // --- НОВЫЙ СКРИПТ ДЛЯ ИНИЦИАЛИЗАЦИИ TomSelect ---
-            new TomSelect('#id_academic_year', { placeholder: 'Выберите год...', allowEmptyOption: true });
-            new TomSelect('#id_quarter', { placeholder: 'Сначала выберите год...', allowEmptyOption: true });
-            new TomSelect('#id_schools', { placeholder: 'Выберите одну или несколько школ...', plugins: ['remove_button'] });
-            new TomSelect('#id_school_classes', { placeholder: 'Сначала выберите школу...', plugins: ['remove_button'] });
-            new TomSelect('#id_subjects', { placeholder: 'Сначала выберите школу...', plugins: ['remove_button'] });
-            
-            // --- СТАРЫЙ РАБОЧИЙ КОД ДЛЯ ДИНАМИЧЕСКИХ ФИЛЬТРОВ (без изменений) ---
+            const yearTomSelect = new TomSelect('#id_academic_year', { placeholder: 'Выберите год...', allowEmptyOption: true });
+            const quarterTomSelect = new TomSelect('#id_quarter', { placeholder: 'Сначала выберите год', allowEmptyOption: true });
+            const schoolsTomSelect = new TomSelect('#id_schools', { placeholder: 'Выберите школу(ы)...', plugins: ['remove_button'] });
+            const classesTomSelect = new TomSelect('#id_school_classes', { placeholder: 'Сначала выберите школу', plugins: ['remove_button'] });
+            const subjectsTomSelect = new TomSelect('#id_subjects', { placeholder: 'Сначала выберите школу', plugins: ['remove_button'] });
+
+            async function loadTomSelectOptions(url, tomSelectInstance, placeholder) {
+                tomSelectInstance.disable();
+                tomSelectInstance.clear();
+                tomSelectInstance.clearOptions();
+                tomSelectInstance.settings.placeholder = placeholder;
+                tomSelectInstance.sync();
+
+                try {
+                    const response = await fetch(url);
+                    const html = await response.text();
+                    
+                    const tempDiv = document.createElement('div');
+                    tempDiv.innerHTML = html;
+
+                    const options = Array.from(tempDiv.querySelectorAll('option')).filter(opt => opt.value);
+                    if (options.length > 0) {
+                        tomSelectInstance.addOptions(options.map(opt => ({ value: opt.value, text: opt.text })));
+                    }
+                    tomSelectInstance.enable();
+                } catch (error) {
+                    console.error('Ошибка загрузки:', error);
+                    tomSelectInstance.settings.placeholder = 'Ошибка загрузки';
+                    tomSelectInstance.sync();
+                }
+            }
+
+            yearTomSelect.on('change', function(yearId) {
+                if (yearId) {
+                    const url = `{% url 'api_load_quarters' %}?year_id=${yearId}`;
+                    loadTomSelectOptions(url, quarterTomSelect, 'Загрузка...');
+                } else {
+                    quarterTomSelect.disable();
+                    quarterTomSelect.clear();
+                    quarterTomSelect.settings.placeholder = 'Сначала выберите год';
+                    quarterTomSelect.sync();
+                }
+            });
+
+            schoolsTomSelect.on('change', function(schoolIds) {
+                if (schoolIds && schoolIds.length > 0) {
+                    const params = new URLSearchParams();
+                    schoolIds.forEach(id => params.append('school_ids[]', id));
+                    
+                    const classesUrl = `{% url 'api_load_classes' %}?${params.toString()}`;
+                    const subjectsUrl = `{% url 'api_load_subjects' %}?${params.toString()}`;
+                    
+                    loadTomSelectOptions(classesUrl, classesTomSelect, 'Загрузка классов...');
+                    loadTomSelectOptions(subjectsUrl, subjectsTomSelect, 'Загрузка предметов...');
+                } else {
+                    classesTomSelect.disable(); classesTomSelect.clear();
+                    classesTomSelect.settings.placeholder = 'Сначала выберите школу';
+                    classesTomSelect.sync();
+
+                    subjectsTomSelect.disable(); subjectsTomSelect.clear();
+                    subjectsTomSelect.settings.placeholder = 'Сначала выберите школу';
+                    subjectsTomSelect.sync();
+                }
+            });
+
             const tableBody = document.getElementById('monitoring-table-body');
             if(tableBody) {
                 tableBody.addEventListener('click', function(event) {
                     const row = event.target.closest('tr[data-href]');
                     if (row) { window.location.href = row.dataset.href; }
-                });
-            }
-            
-            const yearSelect = document.querySelector('#id_academic_year');
-            const quarterSelect = document.querySelector('#id_quarter').tomselect;
-            const schoolsSelect = document.querySelector('#id_schools');
-            const classesSelect = document.querySelector('#id_school_classes').tomselect;
-            const subjectsSelect = document.querySelector('#id_subjects').tomselect;
-    
-            async function loadOptions(url, tomSelectInstance, placeholder) {
-                tomSelectInstance.disable();
-                tomSelectInstance.clear();
-                tomSelectInstance.clearOptions();
-                tomSelectInstance.settings.placeholder = placeholder;
-                tomSelectInstance.inputState(); // Обновить placeholder
-                try {
-                    const response = await fetch(url);
-                    if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
-                    const html = await response.text();
-                    const tempDiv = document.createElement('div');
-                    tempDiv.innerHTML = html;
-                    const options = Array.from(tempDiv.querySelectorAll('option'));
-                    tomSelectInstance.addOptions(options.map(opt => ({value: opt.value, text: opt.text})));
-                    tomSelectInstance.enable();
-                } catch (error) {
-                    console.error('Fetch error:', error);
-                    tomSelectInstance.settings.placeholder = 'Ошибка загрузки';
-                    tomSelectInstance.inputState();
-                }
-            }
-    
-            if (yearSelect) {
-                yearSelect.addEventListener('change', function () {
-                    if (this.value) {
-                        const url = `{% url 'api_load_quarters' %}?year_id=${this.value}`;
-                        loadOptions(url, quarterSelect, 'Загрузка...');
-                    } else {
-                        quarterSelect.disable();
-                        quarterSelect.clear();
-                        quarterSelect.settings.placeholder = 'Сначала выберите год';
-                        quarterSelect.inputState();
-                    }
-                });
-            }
-    
-            if (schoolsSelect) {
-                schoolsSelect.addEventListener('change', function () {
-                    const selectedSchoolIds = Array.from(this.selectedOptions).map(option => option.value);
-                    if (selectedSchoolIds.length > 0) {
-                        const params = new URLSearchParams();
-                        selectedSchoolIds.forEach(id => params.append('school_ids[]', id));
-                        
-                        const classesUrl = `{% url 'api_load_classes' %}?${params.toString()}`;
-                        const subjectsUrl = `{% url 'api_load_subjects' %}?${params.toString()}`;
-                        
-                        loadOptions(classesUrl, classesSelect, 'Загрузка классов...');
-                        loadOptions(subjectsUrl, subjectsSelect, 'Загрузка предметов...');
-                    } else {
-                        classesSelect.disable();
-                        classesSelect.clear();
-                        classesSelect.settings.placeholder = 'Сначала выберите школу';
-                        classesSelect.inputState();
-
-                        subjectsSelect.disable();
-                        subjectsSelect.clear();
-                        subjectsSelect.settings.placeholder = 'Сначала выберите школу';
-                        subjectsSelect.inputState();
-                    }
                 });
             }
         });

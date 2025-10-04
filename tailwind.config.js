@@ -1,12 +1,11 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
   content: [
-      './templates/**/*.html',
-      './core/templates/**/*.html',
+    './**/templates/**/*.html', // <-- Универсальный путь для всех приложений
+    './static/js/**/*.js'      // <-- Добавлено сканирование JS файлов на всякий случай
   ],
   theme: {
     extend: {
-      // --- ДОБАВЬ ЭТОТ БЛОК ---
       backgroundImage: {
         'doodle-pattern': "url('/static/img/bg.jpg')",
       }

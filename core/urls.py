@@ -12,7 +12,9 @@ from .views import (
     monitoring,
     deep_analysis,
     api,
-    grading
+    grading,
+    permissions,
+    
 )
 
 urlpatterns = [
@@ -121,4 +123,6 @@ urlpatterns = [
     path('api/load-quarters/', api.load_quarters, name='api_load_quarters'),
     path('api/load-classes/', api.load_classes, name='api_load_classes'),
     path('api/load-subjects/', api.load_subjects, name='api_load_subjects'),
+    path('dashboard/permissions/', permissions.manage_permissions_view, name='manage_permissions'),
+    path('api/toggle-access/', permissions.toggle_school_access_api, name='api_toggle_access'),
 ]

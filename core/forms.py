@@ -11,6 +11,7 @@ from .models import (
     AcademicYear, Quarter, School, SchoolClass, Subject, 
     ClassSubject, GatTest, TeacherNote
 )
+from .views.permissions import get_accessible_schools
 from .models import Student
 
 # --- ОБЩИЕ СТИЛИ ДЛЯ ФОРМ ---
@@ -112,110 +113,23 @@ class UploadFileForm(forms.Form):
         self.fields['file'].widget.attrs.update({'class': 'mt-1 block w-full text-sm text-gray-900 border border-gray-300 rounded-lg cursor-pointer bg-gray-50 focus:outline-none'})
 
 class DeepAnalysisForm(forms.Form):
-    quarters = forms.ModelMultipleChoiceField(
-        queryset=Quarter.objects.all().order_by('-year__start_date', '-start_date'), 
-        widget=forms.SelectMultiple(attrs={'class': 'select_multiple_class', 'rows': 4}), 
-        label="Четверти", 
-        required=True
-    )
-    schools = forms.ModelMultipleChoiceField(
-        queryset=School.objects.all(), 
-        widget=forms.SelectMultiple(attrs={'class': 'select_multiple_class', 'rows': 5}), 
-        label="Школы", 
-        required=True
-    )
-    school_classes = forms.ModelMultipleChoiceField(
-        queryset=SchoolClass.objects.none(), 
-        widget=forms.SelectMultiple(attrs={'class': 'select_multiple_class', 'rows': 5}), 
-        label="Классы (необязательно)", 
-        required=False
-    )
-    subjects = forms.ModelMultipleChoiceField(
-        queryset=Subject.objects.none(), 
-        widget=forms.SelectMultiple(attrs={'class': 'select_multiple_class', 'rows': 5}), 
-        label="Предметы", 
-        required=True
-    )
-    test_numbers = forms.MultipleChoiceField(
-        choices=[('1', 'GAT-1'), ('2', 'GAT-2')], 
-        widget=forms.CheckboxSelectMultiple,
-        label="Тесты", 
-        required=True
-    )
+    quarters = forms.ModelMultipleChoiceField(queryset=Quarter.objects.none(), widget=forms.CheckboxSelectMultiple, label="Четверти", required=True)
+    schools = forms.ModelMultipleChoiceField(queryset=School.objects.none(), widget=forms.CheckboxSelectMultiple, label="Школы", required=True)
+    school_classes = forms.ModelMultipleChoiceField(queryset=SchoolClass.objects.none(), widget=forms.CheckboxSelectMultiple, label="Классы (необязательно)", required=False)
+    subjects = forms.ModelMultipleChoiceField(queryset=Subject.objects.none(), widget=forms.CheckboxSelectMultiple, label="Предметы", required=True)
+    test_numbers = forms.MultipleChoiceField(choices=[('1', 'GAT-1'), ('2', 'GAT-2')], widget=forms.CheckboxSelectMultiple, label="Тесты", required=True)
 
-    # --- НАЧАЛО ИЗМЕНЕНИЙ ---
     def __init__(self, *args, **kwargs):
-        user = kwargs.pop('user', None) # Получаем пользователя
+        user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
         
-        # Если пользователь - директор, изменяем поле "Школы"
-        if user and not user.is_superuser and hasattr(user, 'profile') and user.profile.role == 'SCHOOL_DIRECTOR':
-            if user.profile.school:
-                self.fields['schools'].queryset = School.objects.filter(id=user.profile.school.id)
-                self.fields['schools'].initial = [user.profile.school.id] # Сразу выбираем его школу
-
-        # Этот код остается для Crispy Forms, если вы его используете
-        self.helper = FormHelper()
-        self.helper.form_tag = False
-        self.helper.disable_csrf = True
-        self.helper.layout = Layout(
-            'quarters',
-            'schools',
-            'school_classes',
-            'subjects',
-            'test_numbers'
-        )
-# --- ИСПРАВЛЕННАЯ ФОРМА МОНИТОРИНГА ---
-class MonitoringFilterForm(forms.Form):
-    academic_year = forms.ModelChoiceField(
-        queryset=AcademicYear.objects.order_by('-start_date'), 
-        required=False, 
-        label="Учебный год", 
-        empty_label="Выберите год...", 
-        widget=forms.Select(attrs={'class': 'select_class_placeholder'}) # Изменим класс для JS
-    )
-    quarter = forms.ModelChoiceField(
-        queryset=Quarter.objects.none(), 
-        required=False, 
-        label="Четверть", 
-        widget=forms.Select(attrs={'class': 'select_class_placeholder'}) # Изменим класс для JS
-    )
-    schools = forms.ModelMultipleChoiceField(
-        queryset=School.objects.all(), 
-        required=False, 
-        label="Школы", 
-        widget=forms.SelectMultiple(attrs={'class': 'select_multiple_class'}) # Изменим класс для JS
-    )
-    school_classes = forms.ModelMultipleChoiceField(
-        queryset=SchoolClass.objects.none(), 
-        required=False, 
-        label="Классы", 
-        widget=forms.SelectMultiple(attrs={'class': 'select_multiple_class'}) # Изменим класс для JS
-    )
-    subjects = forms.ModelMultipleChoiceField(
-        queryset=Subject.objects.none(), 
-        required=False, 
-        label="Предметы", 
-        widget=forms.SelectMultiple(attrs={'class': 'select_multiple_class'}) # Изменим класс для JS
-    )
-    gat_tests = forms.MultipleChoiceField(
-        choices=[(1, 'GAT-1'), (2, 'GAT-2')], 
-        required=False, 
-        label="Тесты", 
-        widget=forms.CheckboxSelectMultiple
-    )
-
-    # --- ДОБАВЛЕН КОНСТРУКТОР ДЛЯ АДАПТАЦИИ ФОРМЫ ПОД ПОЛЬЗОВАТЕЛЯ ---
-    def __init__(self, *args, **kwargs):
-        user = kwargs.pop('user', None) # Получаем пользователя
-        super().__init__(*args, **kwargs)
-
-        # Если пользователь - директор, изменяем поле "Школы"
-        if user and not user.is_superuser and hasattr(user, 'profile') and user.profile.role == 'SCHOOL_DIRECTOR':
-            if user.profile.school:
-                self.fields['schools'].queryset = School.objects.filter(id=user.profile.school.id)
-                self.fields['schools'].initial = [user.profile.school.id] # Сразу выбираем его школу
-                # self.fields['schools'].disabled = True # Можно раскомментировать, чтобы директор не мог изменить школу
+        if user:
+            # Используем "умную" функцию для получения списка доступных школ
+            accessible_schools_qs = get_accessible_schools(user)
+            self.fields['schools'].queryset = accessible_schools_qs
+            
+            # Фильтруем и четверти, чтобы показывать только те, где были тесты в доступных школах
+            self.fields['quarters'].queryset = Quarter.objects.filter(gattests__school_class__school__in=accessible_schools_qs).distinct().order_by('-year__start_date', '-start_date')
 
         # Эта логика сработает, когда форма будет инициализирована с GET-параметрами
         if self.data:
@@ -234,6 +148,75 @@ class MonitoringFilterForm(forms.Form):
             except (ValueError, TypeError):
                 pass
 
+
+class MonitoringFilterForm(forms.Form):
+    academic_year = forms.ModelChoiceField(
+        queryset=AcademicYear.objects.order_by('-start_date'), 
+        required=False, 
+        label="Учебный год", 
+        empty_label="Выберите год..."
+    )
+    quarter = forms.ModelChoiceField(
+        queryset=Quarter.objects.none(), 
+        required=False, 
+        label="Четверть"
+    )
+    schools = forms.ModelMultipleChoiceField(
+        queryset=School.objects.none(), # Заполняется динамически
+        required=False, 
+        label="Школы", 
+        widget=forms.SelectMultiple
+    )
+    school_classes = forms.ModelMultipleChoiceField(
+        queryset=SchoolClass.objects.none(), # Заполняется динамически
+        required=False, 
+        label="Классы", 
+        widget=forms.SelectMultiple
+    )
+    subjects = forms.ModelMultipleChoiceField(
+        queryset=Subject.objects.none(), # Заполняется динамически
+        required=False, 
+        label="Предметы", 
+        widget=forms.SelectMultiple
+    )
+    gat_tests = forms.MultipleChoiceField(
+        choices=[(1, 'GAT-1'), (2, 'GAT-2')], 
+        required=False, 
+        label="Тесты", 
+        widget=forms.CheckboxSelectMultiple
+    )
+
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop('user', None)
+        super().__init__(*args, **kwargs)
+
+        # Применяем фильтрацию по правам доступа
+        if user:
+            accessible_schools_qs = get_accessible_schools(user)
+            self.fields['schools'].queryset = accessible_schools_qs
+
+            # Фильтруем и годы, чтобы не показывать пустые
+            year_ids_with_results = GatTest.objects.filter(
+                school_class__school__in=accessible_schools_qs
+            ).values_list('quarter__year_id', flat=True).distinct()
+            self.fields['academic_year'].queryset = AcademicYear.objects.filter(id__in=year_ids_with_results).order_by('-start_date')
+
+
+        # Динамическая подгрузка для связанных полей (если данные уже отправлены)
+        if 'academic_year' in self.data:
+            try:
+                year_id = int(self.data.get('academic_year'))
+                self.fields['quarter'].queryset = Quarter.objects.filter(year_id=year_id).order_by('start_date')
+            except (ValueError, TypeError):
+                pass
+
+        if 'schools' in self.data:
+            try:
+                school_ids = self.data.getlist('schools')
+                self.fields['school_classes'].queryset = SchoolClass.objects.filter(school_id__in=school_ids).order_by('name')
+                self.fields['subjects'].queryset = Subject.objects.filter(school_id__in=school_ids).order_by('name')
+            except (ValueError, TypeError):
+                pass
 # --- ФОРМЫ ПРОФИЛЯ И ПОЛЬЗОВАТЕЛЕЙ ---
 
 class ProfileUpdateForm(forms.ModelForm):
@@ -304,7 +287,7 @@ class StatisticsFilterForm(forms.Form):
         required=False
     )
     schools = forms.ModelMultipleChoiceField(
-        queryset=School.objects.all().order_by('name'),
+        queryset=School.objects.none(),  # Изначально queryset пустой, мы его заполним ниже
         widget=forms.CheckboxSelectMultiple,
         label="Школы",
         required=False
@@ -313,22 +296,21 @@ class StatisticsFilterForm(forms.Form):
         queryset=SchoolClass.objects.none(),
         widget=forms.CheckboxSelectMultiple,
         label="Классы",
-        required=True
+        required=False # <-- ИЗМЕНЕНО: Сделал необязательным для удобства
     )
     test_numbers = forms.MultipleChoiceField(
-        choices=[('1', 'GAT-1'), ('2', 'GAT-2')],
+        choices=[('1', 'GAT-1'), ('2', 'GOT-2')],
         widget=forms.CheckboxSelectMultiple,
         label="Тесты",
         required=False
     )
 
-    # --- НАЧАЛО ИЗМЕНЕНИЙ ---
     def __init__(self, *args, **kwargs):
-        user = kwargs.pop('user', None)  # Получаем пользователя
+        user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
 
-        # Если пользователь - директор, изменяем поле "Школы"
-        if user and not user.is_superuser and hasattr(user, 'profile') and user.profile.role == 'SCHOOL_DIRECTOR':
-            if user.profile.school:
-                self.fields['schools'].queryset = School.objects.filter(id=user.profile.school.id)
-                self.fields['schools'].initial = [user.profile.school.id] 
+        # Эта простая проверка сработает и для админа, и для директора
+        if user:
+            # ---> ВОТ ИСПРАВЛЕНИЕ <---
+            # Просто используем нашу функцию, чтобы получить правильный список школ
+            self.fields['schools'].queryset = get_accessible_schools(user)

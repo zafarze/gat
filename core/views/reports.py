@@ -12,6 +12,8 @@ from django.db.models import Count
 from openpyxl import Workbook
 from weasyprint import HTML
 from django.core.cache import cache
+from .permissions import get_accessible_schools
+
 
 from .. import services
 from .. import utils
@@ -71,9 +73,9 @@ def get_detailed_results_data(test_number, request_get, request_user):
         tests_qs = GatTest.objects.filter(test_number=test_number).select_related('quarter__year', 'school_class__school')
         
         # Фильтр по роли директора
-        if not request_user.is_superuser and hasattr(request_user, 'profile') and request_user.profile.role == 'SCHOOL_DIRECTOR':
-            if request_user.profile.school:
-                tests_qs = tests_qs.filter(school_class__school=request_user.profile.school)
+        if not request_user.is_superuser:
+            accessible_schools = get_accessible_schools(request_user)
+            tests_qs = tests_qs.filter(school_class__school__in=accessible_schools)
         
         # Применение фильтров со страницы
         if year_id: tests_qs = tests_qs.filter(quarter__year_id=year_id)
@@ -129,7 +131,7 @@ def detailed_results_list_view(request, test_number):
         'students_data': students_data, 
         'table_header': table_header,
         'years': AcademicYear.objects.all(), 
-        'schools': School.objects.all(), 
+        'schools': get_accessible_schools(request.user) if not request.user.is_superuser else School.objects.all(),
         'selected_year': request.GET.get('year'),
         'selected_quarter': request.GET.get('quarter'), 
         'selected_school': request.GET.get('school'),
@@ -143,6 +145,11 @@ def detailed_results_list_view(request, test_number):
 @login_required
 def student_result_detail_view(request, pk):
     result = get_object_or_404(StudentResult, pk=pk)
+    if not request.user.is_superuser:
+        accessible_schools = get_accessible_schools(request.user)
+        if result.student.school_class.school not in accessible_schools:
+            messages.error(request, "У вас нет доступа к этому результату.")
+        return redirect('dashboard')
     subject_map = {s.id: s for s in Subject.objects.all()}
     processed_scores = {}
     if isinstance(result.scores, dict):
@@ -172,9 +179,8 @@ def archive_years_view(request):
     results_qs = StudentResult.objects.all()
     user = request.user
     
-    if not user.is_superuser and hasattr(user, 'profile') and user.profile.role == 'SCHOOL_DIRECTOR':
-        if user.profile.school:
-            results_qs = results_qs.filter(student__school_class__school=user.profile.school)
+    accessible_schools = get_accessible_schools(user)
+    results_qs = results_qs.filter(student__school_class__school__in=accessible_schools)
             
     year_ids_with_results = results_qs.values_list('gat_test__quarter__year_id', flat=True).distinct()
     years = AcademicYear.objects.filter(id__in=year_ids_with_results)
@@ -188,9 +194,8 @@ def archive_quarters_view(request, year_id):
     quarters_qs = Quarter.objects.filter(year=year, gattests__student_results__isnull=False)
     user = request.user
 
-    if not user.is_superuser and hasattr(user, 'profile') and user.profile.role == 'SCHOOL_DIRECTOR':
-        if user.profile.school:
-            quarters_qs = quarters_qs.filter(gattests__school_class__school=user.profile.school)
+    accessible_schools = get_accessible_schools(user)
+    quarters_qs = quarters_qs.filter(gattests__school_class__school__in=accessible_schools)
 
     quarters = quarters_qs.distinct().order_by('start_date')
     context = {'year': year, 'quarters': quarters, 'title': f'Архив: {year.name}'}
@@ -199,23 +204,73 @@ def archive_quarters_view(request, year_id):
 @login_required
 def archive_schools_view(request, quarter_id):
     quarter = get_object_or_404(Quarter, id=quarter_id)
-    schools_qs = School.objects.filter(classes__gattests__quarter=quarter, classes__gattests__student_results__isnull=False)
     user = request.user
     
-    if not user.is_superuser and hasattr(user, 'profile') and user.profile.role == 'SCHOOL_DIRECTOR':
-        if user.profile.school:
-            schools_qs = schools_qs.filter(id=user.profile.school.id)
+    # 1. Сначала находим все школы, где были тесты в этой четверти
+    schools_qs = School.objects.filter(
+        classes__gattests__quarter=quarter, 
+        classes__gattests__student_results__isnull=False
+    ).distinct()
 
-    schools = schools_qs.distinct().order_by('name')
-    context = {'quarter': quarter, 'schools': schools, 'title': f'Архив: {quarter}'}
+    # 2. Затем, если пользователь НЕ администратор, мы фильтруем этот список,
+    #    оставляя только те школы, к которым у него есть доступ.
+    if not user.is_superuser:
+        accessible_schools = get_accessible_schools(user)
+        # .values_list('id', flat=True) - это эффективный способ получить только ID
+        schools_qs = schools_qs.filter(id__in=accessible_schools.values_list('id', flat=True))
+
+    # 3. Передаем отсортированный и отфильтрованный список в шаблон
+    schools = schools_qs.order_by('name')
+    
+    context = {
+        'quarter': quarter, 
+        'schools': schools, 
+        'title': f'Архив: {quarter}'
+    }
     return render(request, 'results/archive_schools.html', context)
 
 @login_required
 def archive_classes_view(request, quarter_id, school_id):
+    """
+    Эта функция отображает страницу со списком классов для выбранной школы в архиве.
+    Она также выполняет проверку прав доступа.
+    """
+    # 1. Получаем объекты четверти и школы из базы данных по их ID из URL.
+    # Если объект не будет найден, Django автоматически вернет ошибку 404.
     quarter = get_object_or_404(Quarter, id=quarter_id)
     school = get_object_or_404(School, id=school_id)
-    classes = SchoolClass.objects.filter(school=school, gattests__quarter=quarter, gattests__student_results__isnull=False).distinct().order_by('name')
-    context = {'quarter': quarter, 'school': school, 'classes': classes, 'title': f'Архив: {school.name}'}
+
+    # 2. Проверяем права доступа, если пользователь НЕ является администратором.
+    if not request.user.is_superuser:
+        # Получаем список школ, к которым у текущего пользователя есть доступ.
+        accessible_schools = get_accessible_schools(request.user)
+        
+        # Проверяем, входит ли школа, которую запросил пользователь, в список доступных.
+        if school not in accessible_schools:
+            # Если доступа нет, показываем пользователю сообщение об ошибке.
+            messages.error(request, "У вас нет доступа к архиву этой школы.")
+            # И перенаправляем его на начальную страницу архива.
+            # Именно эта строчка и вызывала проблему, которую вы описали.
+            return redirect('results_archive')
+
+    # 3. Если проверка прав прошла успешно (или пользователь - администратор),
+    #    то мы получаем список всех классов для этой школы, у которых есть результаты тестов
+    #    в выбранной четверти.
+    classes = SchoolClass.objects.filter(
+        school=school, 
+        gattests__quarter=quarter, 
+        gattests__student_results__isnull=False
+    ).distinct().order_by('name')
+
+    # 4. Формируем контекст с данными, которые будут переданы в HTML-шаблон.
+    context = {
+        'quarter': quarter, 
+        'school': school, 
+        'classes': classes, 
+        'title': f'Архив: {school.name}'
+    }
+    
+    # 5. Отображаем HTML-страницу, передав в нее все собранные данные.
     return render(request, 'results/archive_classes.html', context)
 
 def _get_data_for_test(gat_test):
@@ -234,38 +289,79 @@ def _get_data_for_test(gat_test):
 
 @login_required
 def class_results_dashboard_view(request, quarter_id, class_id):
-    school_class, quarter = get_object_or_404(SchoolClass, id=class_id), get_object_or_404(Quarter, id=quarter_id)
-    test_gat1, test_gat2 = GatTest.objects.filter(school_class=school_class, quarter=quarter, test_number=1).first(), GatTest.objects.filter(school_class=school_class, quarter=quarter, test_number=2).first()
+    # СНАЧАЛА определяем переменные
+    school_class = get_object_or_404(SchoolClass, id=class_id)
+    quarter = get_object_or_404(Quarter, id=quarter_id)
+    
+    # Проверка прав доступа
+    if not request.user.is_superuser:
+        accessible_schools = get_accessible_schools(request.user)
+        # Используем предложенное ранее исправление для надежности
+        if not accessible_schools.filter(id=school_class.school.id).exists():
+            messages.error(request, "У вас нет доступа к отчетам этого класса.")
+            return redirect('results_archive')
+    
+    # ТЕПЕРЬ используем переменные для поиска тестов
+    test_gat1 = GatTest.objects.filter(school_class=school_class, quarter=quarter, test_number=1).first()
+    test_gat2 = GatTest.objects.filter(school_class=school_class, quarter=quarter, test_number=2).first()
+    
+    # Получаем данные для каждого теста с помощью вспомогательной функции
     students_data_gat1, table_header_gat1 = _get_data_for_test(test_gat1)
     students_data_gat2, table_header_gat2 = _get_data_for_test(test_gat2)
+    
+    # Создаем словарь для объединения результатов всех студентов
     all_students_map = {}
+
+    # Обрабатываем результаты GAT-1
     for data in students_data_gat1:
         student = data['student']
-        if student.id not in all_students_map: all_students_map[student.id] = {'student': student, 'score1': None, 'score2': None}
+        if student.id not in all_students_map:
+            all_students_map[student.id] = {'student': student, 'score1': None, 'score2': None}
         all_students_map[student.id]['score1'] = data['total_score']
+
+    # Обрабатываем результаты GAT-2
     for data in students_data_gat2:
         student = data['student']
-        if student.id not in all_students_map: all_students_map[student.id] = {'student': student, 'score1': None, 'score2': None}
+        if student.id not in all_students_map:
+            all_students_map[student.id] = {'student': student, 'score1': None, 'score2': None}
         all_students_map[student.id]['score2'] = data['total_score']
+
+    # Формируем итоговый список студентов с их результатами по обоим тестам
     students_data_total = []
     for student_id, data in all_students_map.items():
-        score1, score2 = data.get('score1'), data.get('score2')
+        score1 = data.get('score1')
+        score2 = data.get('score2')
+        
+        # Считаем общий балл, только если есть хотя бы один результат
         total_score = (score1 or 0) + (score2 or 0) if score1 is not None or score2 is not None else None
+        
         students_data_total.append({
             'student': data['student'],
             'score1': score1,
             'score2': score2,
             'total_score': total_score,
-            # --- ВОТ ЭТА СТРОКА ДОБАВЛЕНА ---
             'display_class': data['student'].school_class.school.name 
         })
+        
+    # Сортируем студентов по общему баллу (от большего к меньшему)
+    # Студенты без результатов окажутся в конце списка
     students_data_total.sort(key=lambda x: (x['total_score'] is None, -x.get('total_score', 0) if x.get('total_score') is not None else 0))
+    
+    # Готовим контекст для передачи в HTML-шаблон
     context = {
-        'title': f'Отчет: {school_class.name}', 'school_class': school_class, 'quarter': quarter, 'students_data_total': students_data_total,
-        'students_data_gat1': students_data_gat1, 'table_header_gat1': table_header_gat1,
-        'students_data_gat2': students_data_gat2, 'table_header_gat2': table_header_gat2,
-        'test_gat1': test_gat1, 'test_gat2': test_gat2,
+        'title': f'Отчет: {school_class.name}', 
+        'school_class': school_class, 
+        'quarter': quarter, 
+        'students_data_total': students_data_total,
+        'students_data_gat1': students_data_gat1, 
+        'table_header_gat1': table_header_gat1,
+        'students_data_gat2': students_data_gat2, 
+        'table_header_gat2': table_header_gat2,
+        'test_gat1': test_gat1, 
+        'test_gat2': test_gat2,
     }
+    
+    # Отображаем страницу с отчетом
     return render(request, 'results/class_results_dashboard.html', context)
 
 @login_required
@@ -302,10 +398,10 @@ def analysis_view(request):
     schools_qs = School.objects.all()
     quarters_qs = Quarter.objects.annotate(test_count=Count('gattests')).filter(test_count__gt=0)
 
-    if not user.is_superuser and hasattr(user, 'profile') and user.profile.role == 'SCHOOL_DIRECTOR':
-        if user.profile.school:
-            schools_qs = schools_qs.filter(id=user.profile.school.id)
-            quarters_qs = quarters_qs.filter(gattests__school_class__school=user.profile.school).distinct()
+    if not user.is_superuser:
+        accessible_schools = get_accessible_schools(user)
+        schools_qs = schools_qs.filter(id__in=accessible_schools.values_list('id', flat=True))
+        quarters_qs = quarters_qs.filter(gattests__school_class__school__in=accessible_schools).distinct()
 
     try: selected_quarter_id = int(request.GET.get('quarter', 0))
     except (ValueError, TypeError): selected_quarter_id = 0
@@ -402,9 +498,9 @@ def statistics_view(request):
             'student__school_class__school', 'student__school_class__parent', 'gat_test__quarter'
         ).all()
 
-        if not request.user.is_superuser and hasattr(request.user, 'profile') and request.user.profile.role == 'SCHOOL_DIRECTOR':
-            if request.user.profile.school:
-                results_qs = results_qs.filter(student__school_class__school=request.user.profile.school)
+        if not request.user.is_superuser:
+            accessible_schools = get_accessible_schools(request.user)
+            results_qs = results_qs.filter(student__school_class__school__in=accessible_schools)
 
         if selected_schools: results_qs = results_qs.filter(student__school_class__school__in=selected_schools)
         if selected_quarters: results_qs = results_qs.filter(gat_test__quarter__in=selected_quarters)
