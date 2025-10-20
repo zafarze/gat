@@ -95,7 +95,7 @@ body {
 .chip span {
     display: block;
     padding: 0.5rem 1rem;
-    border-radius: 9999px;
+    border-radius: 10px;
     background-color: #f1f5f9;
     color: var(--text);
     font-weight: 500;

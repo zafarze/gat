@@ -1,4 +1,4 @@
-{# D:\New_GAT\templates\components\_base_modal.html (НОВЫЙ ФАЙЛ) #}
+{# D:\New_GAT\templates\components\_base_modal.html (ИСПРАВЛЕННАЯ ВЕРСИЯ) #}
 {% load static %}
 <!DOCTYPE html>
 <html lang="ru">
@@ -6,21 +6,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ title }}</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    {# --- ИСПРАВЛЕНО: Подключаем ВАШ скомпилированный CSS --- #}
+    <link href="{% static 'css/style.css' %}" rel="stylesheet">
 </head>
-<body class="bg-gray-100">
-    {# Главный контейнер для содержимого без сайдбара и шапки #}
+<body class="bg-gray-50">
     <main class="p-4 sm:p-6 lg:p-8">
-        {% if messages %}
-            <div class="mb-4">
-                {% for message in messages %}
-                    <div class="p-4 rounded-md {% if message.tags == 'success' %}bg-green-100 text-green-800{% elif message.tags == 'error' %}bg-red-100 text-red-800{% else %}bg-blue-100 text-blue-800{% endif %}">
-                        {{ message }}
-                    </div>
-                {% endfor %}
-            </div>
-        {% endif %}
-
         {% block content %}{% endblock %}
     </main>
 </body>

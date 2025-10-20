@@ -7,8 +7,9 @@
         <form method="post">
             {% csrf_token %}
             <div class="mt-8 flex justify-end">
-                <a href="{% url 'student_list' %}" class="bg-gray-200 text-gray-800 px-4 py-2 rounded-lg mr-4">Отмена</a>
-                <button type="submit" class="bg-red-600 text-white px-4 py-2 rounded-lg">Удалить</button>
+                {# ИСПРАВЛЕНО: Добавлен namespace 'core' #}
+                <a href="{% url 'core:student_list' object.school_class.id %}" class="modern-btn secondary">Отмена</a>
+                <button type="submit" class="modern-btn danger ml-4">Удалить</button>
             </div>
         </form>
     </div>

@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
 
     # Сторонние приложения
+    'widget_tweaks',
     'crispy_forms',
     'crispy_tailwind',
     'django_htmx',
@@ -48,6 +49,7 @@ INSTALLED_APPS = [
     # Твои приложения
     'core',
     'accounts',
+    
 ]
 
 MIDDLEWARE = [
@@ -78,6 +80,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'core.context_processors.archive_years_processor',
             ],
         },
     },
@@ -116,7 +119,7 @@ AUTH_PASSWORD_VALIDATORS = [
 # https://docs.djangoproject.com/en/5.2/topics/i18n/
 
 LANGUAGE_CODE = 'ru-ru'
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Asia/Dushanbe'
 USE_I18N = True
 USE_TZ = True
 
@@ -139,7 +142,10 @@ STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Настройки Аутентификации
-AUTHENTICATION_BACKENDS = ['core.backends.EmailBackend']
+AUTHENTICATION_BACKENDS = [
+    'core.backends.EmailOrUsernameBackend', # Наш новый универсальный бэкенд
+    'django.contrib.auth.backends.ModelBackend', # Стандартный бэкенд Django
+]
 LOGOUT_REDIRECT_URL = '/'
 LOGIN_URL = '/'
 X_FRAME_OPTIONS = 'SAMEORIGIN'
@@ -170,3 +176,40 @@ else:
 # Настройки для Crispy Forms и Tailwind
 CRISPY_ALLOWED_TEMPLATE_PACKS = "tailwind"
 CRISPY_TEMPLATE_PACK = "tailwind"
+# Указываем Django использовать pytz для работы с часовыми поясами
+USE_DEPRECATED_PYTZ = True
+TIME_ZONE_PYTZ = 'Asia/Dushanbe'
+
+# --- НАСТРОЙКИ ЛОГИРОВАНИЯ ---
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'cleanup_file': {
+            'level': 'WARNING',
+            'class': 'logging.FileHandler',
+            # Убедитесь, что BASE_DIR определен вверху вашего файла settings.py
+            'filename': os.path.join(BASE_DIR, 'logs/cleanup.log'),
+            'formatter': 'verbose',
+        },
+    },
+    'loggers': {
+        'cleanup_logger': { # Имя логгера, которое мы использовали во view
+            'handlers': ['cleanup_file'],
+            'level': 'WARNING',
+            'propagate': True,
+        },
+    },
+}
+
+# --- Убедитесь, что папка logs существует ---
+# Этот блок должен быть ПОСЛЕ словаря LOGGING, а не внутри него.
+LOGS_DIR = os.path.join(BASE_DIR, 'logs')
+if not os.path.exists(LOGS_DIR):
+    os.makedirs(LOGS_DIR)

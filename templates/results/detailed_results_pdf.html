@@ -82,19 +82,25 @@
                 <td class="student-name">{{ data.student }}</td>
                 <td>{{ data.student.school_class.name }}</td>
                 
+                {# --- ✨ НАЧАЛО БЛОКА ИСПРАВЛЕНИЙ ✨ --- #}
                 {% for header in table_header %}
+                    {# 1. Получаем ID предмета в виде строки #}
                     {% with subject_id_str=header.subject.id|stringformat:"s" %}
-                    {% with answers=data.result.scores|get_item:subject_id_str %}
+                    {# 2. Используем .scores_by_subject (а не .scores) #}
+                    {% with answers=data.result.scores_by_subject|get_item:subject_id_str %}
                         {% for q_num in header.questions %}
-                            {% with answer=answers|get_item:forloop.counter0 %}
-                                <td class="{% if answer == 1 %}correct{% elif answer == 0 %}incorrect{% endif %}">
-                                    {% if answer == 1 %}1{% elif answer == 0 %}0{% else %}-{% endif %}
+                            {# 3. Получаем ответ по КЛЮЧУ (q_num) #}
+                            {% with answer=answers|get_item:q_num %}
+                                <td class="{% if answer == True %}correct{% elif answer == False %}incorrect{% endif %}">
+                                    {# 4. Сравниваем с True/False #}
+                                    {% if answer == True %}1{% elif answer == False %}0{% else %}-{% endif %}
                                 </td>
                             {% endwith %}
                         {% endfor %}
                     {% endwith %}
                     {% endwith %}
                 {% endfor %}
+                {# --- ✨ КОНЕЦ БЛОКА ИСПРАВЛЕНИЙ ✨ --- #}
 
                 <td class="total-score">{{ data.total_score }}</td>
             </tr>

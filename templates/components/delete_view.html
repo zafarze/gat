@@ -4,6 +4,7 @@
 {% block page_title %}{{ title }}{% endblock %}
 
 {% block breadcrumbs %}
+    {# ИСПРАВЛЕНО: Добавлен тег 'url' для переменной cancel_url #}
     <a href="{% url cancel_url %}" class="text-indigo-600 hover:underline mb-2 inline-block">&larr; Отмена</a>
 {% endblock %}
 

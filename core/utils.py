@@ -1,8 +1,13 @@
+# D:\New_GAT\core\utils.py
+
 def calculate_grade_from_percentage(percentage):
     """
     Единая функция для конвертации процента в 10-балльную оценку.
-    Всегда используется по всему проекту.
+    Используется по всему проекту.
     """
+    if not isinstance(percentage, (int, float)):
+        return 1 # Возвращаем минимальную оценку, если данные некорректны
+
     if percentage >= 91: return 10
     elif percentage >= 81: return 9
     elif percentage >= 71: return 8

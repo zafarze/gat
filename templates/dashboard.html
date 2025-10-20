@@ -1,67 +1,153 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block title %}Главная - Панель управления{% endblock %}
 
 {% block content %}
-    <div class="flex justify-between items-center mb-6">
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
         <h1 class="text-3xl font-bold text-gray-800">Панель управления</h1>
-        {# Фильтры по периоду #}
+        {# --- БЛОК С ФИЛЬТРАМИ ПЕРИОДОВ --- #}
         <div class="flex items-center bg-white rounded-lg shadow-sm p-1 space-x-1">
-            <a href="{% url 'dashboard' %}?period=quarter" class="px-4 py-2 text-sm font-medium rounded-md transition-colors {% if selected_period == 'quarter' %}bg-indigo-600 text-white shadow{% else %}text-gray-600 hover:bg-gray-100{% endif %}">
-                Эта четверть
-            </a>
-            <a href="{% url 'dashboard' %}?period=year" class="px-4 py-2 text-sm font-medium rounded-md transition-colors {% if selected_period == 'year' %}bg-indigo-600 text-white shadow{% else %}text-gray-600 hover:bg-gray-100{% endif %}">
-                Этот год
-            </a>
-            <a href="{% url 'dashboard' %}?period=all" class="px-4 py-2 text-sm font-medium rounded-md transition-colors {% if selected_period == 'all' %}bg-indigo-600 text-white shadow{% else %}text-gray-600 hover:bg-gray-100{% endif %}">
-                Все время
-            </a>
+            <a href="{% url 'core:dashboard' %}?period=quarter" class="px-4 py-2 text-sm font-medium rounded-md transition-colors {% if selected_period == 'quarter' %}bg-indigo-600 text-white shadow{% else %}text-gray-600 hover:bg-gray-100{% endif %}">Эта четверть</a>
+            <a href="{% url 'core:dashboard' %}?period=year" class="px-4 py-2 text-sm font-medium rounded-md transition-colors {% if selected_period == 'year' %}bg-indigo-600 text-white shadow{% else %}text-gray-600 hover:bg-gray-100{% endif %}">Этот год</a>
+            <a href="{% url 'core:dashboard' %}?period=all" class="px-4 py-2 text-sm font-medium rounded-md transition-colors {% if selected_period == 'all' %}bg-indigo-600 text-white shadow{% else %}text-gray-600 hover:bg-gray-100{% endif %}">Все время</a>
         </div>
     </div>
 
-    {# KPI карточки #}
+    {# --- НАЧАЛО НОВОГО БЛОКА ОПОВЕЩЕНИЯ --- #}
+    <div class="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 rounded-md shadow-sm mb-6" role="alert">
+      <div class="flex items-center">
+        <div class="py-1">
+          <svg class="fill-current h-6 w-6 text-yellow-500 mr-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M2.93 17.07A10 10 0 1 1 17.07 2.93 10 10 0 0 1 2.93 17.07zm12.73-1.41A8 8 0 1 0 4.34 4.34a8 8 0 0 0 11.32 11.32zM9 11V9h2v6H9v-4zm0-6h2v2H9V5z"/></svg>
+        </div>
+        <div>
+          <p class="font-bold">Внимание: Бета-версия!</p>
+          <p class="text-sm">Этот портал находится в стадии активной разработки. Если вы обнаружите ошибки или у вас есть предложения по улучшению, пожалуйста, сообщите мне в Telegram:
+            <a href="https://t.me/+992918202223" target="_blank" class="font-medium underline hover:text-yellow-800">
+              +992 918 20 22 23
+            </a>.
+            Спасибо за ваше понимание и помощь! 🙏
+          </p>
+        </div>
+      </div>
+    </div>
+    {# --- КОНЕЦ НОВОГО БЛОКА ОПОВЕЩЕНИЯ --- #}
+
+    {# --- НАЧАЛО БЛОКА С КАРТОЧКАМИ KPI --- #}
     <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-8">
-        {% include 'components/dashboard_kpi_cards.html' %}
+
+        {# --- Карточка Школы --- #}
+        {# ✨ WRAPPER: Оборачиваем в ссылку #}
+        <a href="{% url 'core:school_list' %}" class="block bg-white p-5 rounded-lg shadow-md hover:shadow-lg transition-shadow duration-200">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-gray-500">Всего школ</p>
+                    <p class="text-3xl font-bold text-gray-800">{{ school_count }}</p>
+                </div>
+                <div class="bg-blue-100 rounded-full p-3">
+                    <svg class="h-6 w-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>
+                </div>
+            </div>
+        </a> {# ✨ END WRAPPER #}
+
+        {# --- Карточка Студенты --- #}
+        {# ✨ WRAPPER: Оборачиваем в ссылку #}
+        <a href="{% url 'core:student_school_list' %}" class="block bg-white p-5 rounded-lg shadow-md hover:shadow-lg transition-shadow duration-200">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-gray-500">Всего студентов</p>
+                    <p class="text-3xl font-bold text-gray-800">{{ student_count }}</p>
+                </div>
+                <div class="bg-purple-100 rounded-full p-3">
+                    <svg class="h-6 w-6 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
+                </div>
+            </div>
+        </a> {# ✨ END WRAPPER #}
+
+        {# --- Карточка Предметы --- #}
+        {# ✨ WRAPPER: Оборачиваем в ссылку #}
+        <a href="{% url 'core:subject_list' %}" class="block bg-white p-5 rounded-lg shadow-md hover:shadow-lg transition-shadow duration-200">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-gray-500">Всего предметов</p>
+                    <p class="text-3xl font-bold text-gray-800">{{ subject_count }}</p>
+                </div>
+                <div class="bg-green-100 rounded-full p-3">
+                    <svg class="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
+                </div>
+            </div>
+        </a> {# ✨ END WRAPPER #}
+
+        {# --- Карточка Тесты --- #}
+        {# ✨ WRAPPER: Оборачиваем в ссылку #}
+        <a href="{% url 'core:gat_test_list' %}" class="block bg-white p-5 rounded-lg shadow-md hover:shadow-lg transition-shadow duration-200">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-gray-500">Проведено тестов</p>
+                    <p class="text-3xl font-bold text-gray-800">{{ test_count }}</p>
+                </div>
+                <div class="bg-yellow-100 rounded-full p-3">
+                    <svg class="h-6 w-6 text-yellow-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg>
+                </div>
+            </div>
+        </a> {# ✨ END WRAPPER #}
+
     </div>
 
-    {# --- ОСНОВНАЯ СЕТКА С ВИДЖЕТАМИ --- #}
+
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        
-        {# --- ЛЕВАЯ, БОЛЬШАЯ КОЛОНКА (2/3) --- #}
+        {# --- ЛЕВАЯ КОЛОНКА С ГРАФИКАМИ --- #}
         <div class="lg:col-span-2 space-y-8">
-            <div class="bg-white p-6 rounded-lg shadow-md">
-                {# УСЛОВИЕ: Показываем разный заголовок и график в зависимости от роли #}
-                {% if user.is_superuser %}
-                    <h2 class="text-xl font-semibold text-gray-700 mb-4">Топ-10 школ по среднему баллу</h2>
-                    <canvas id="schoolChart"></canvas>
-                {% else %}
-                    <h2 class="text-xl font-semibold text-gray-700 mb-4">Успеваемость классов в вашей школе</h2>
-                    <canvas id="directorClassChart"></canvas>
-                {% endif %}
+
+            <div class="grid grid-cols-1 xl:grid-cols-5 gap-8">
+                <div class="xl:col-span-2 bg-white p-6 rounded-lg shadow-md">
+                    <h2 class="text-xl font-semibold text-gray-700 mb-4">Распределение успеваемости</h2>
+                    <div class="relative h-64">
+                        <canvas id="performanceDistributionChart"></canvas>
+                    </div>
+                </div>
+                <div class="xl:col-span-3 bg-white p-6 rounded-lg shadow-md">
+                    {% if user.is_staff or user.profile.role == 'EXPERT' %}
+                        <h2 class="text-xl font-semibold text-gray-700 mb-4">Топ-10 школ по среднему баллу</h2>
+                    {% else %}
+                        <h2 class="text-xl font-semibold text-gray-700 mb-4">Успеваемость классов</h2>
+                    {% endif %}
+                    <div class="relative h-64">
+                        <canvas id="schoolChart"></canvas>
+                    </div>
+                </div>
             </div>
 
             <div class="bg-white p-6 rounded-lg shadow-md">
-                <h2 class="text-xl font-semibold text-gray-700 mb-4">Тесты без результатов</h2>
+                <h2 class="text-xl font-semibold text-gray-700 mb-4">Топ-10 предметов по среднему баллу (%)</h2>
+                <div class="relative h-96">
+                    <canvas id="subjectChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        {# --- ПРАВАЯ КОЛОНКА СО СПИСКАМИ --- #}
+        <div class="space-y-8">
+
+            <div class="bg-white p-6 rounded-lg shadow-md">
+                <h2 class="text-xl font-semibold text-gray-700 mb-4 flex items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-indigo-500 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" /></svg>
+                    Недавние тесты
+                </h2>
                 <ul class="space-y-3">
-                    {% for test in tests_without_results %}
-                    <li class="p-3 flex justify-between items-center rounded-md hover:bg-yellow-50 border-l-4 border-yellow-400">
-                        <div>
-                            <p class="font-medium text-gray-800">{{ test.name }}</p>
-                            <p class="text-sm text-gray-500">{{ test.school_class }} - {{ test.test_date|date:"d.m.Y" }}</p>
-                        </div>
-                        {% if user.is_superuser %}
-                        <a href="{% url 'upload_results' %}?gat_test={{ test.id }}" class="btn btn-secondary text-xs">Загрузить</a>
-                        {% endif %}
+                    {% for test in recent_tests %}
+                    <li class="p-2 rounded-md hover:bg-gray-50">
+                        <a href="{% url 'core:detailed_results_list' test.test_number %}?test_id={{ test.id }}" class="block">
+                            <p class="font-medium text-gray-800 text-sm">{{ test.name }}</p>
+                            <p class="text-xs text-gray-500">{{ test.school.name }} / {% if test.school_class %}{{ test.school_class.name }}{% endif %} - {{ test.test_date|date:"d.m.Y" }}</p>
+                        </a>
                     </li>
                     {% empty %}
-                    <li class="text-center text-gray-500 p-4">Все тесты имеют результаты!</li>
+                    <li class="text-center text-gray-500 p-4">Нет недавних тестов.</li>
                     {% endfor %}
                 </ul>
             </div>
-        </div>
 
-        {# --- ПРАВАЯ, УЗКАЯ КОЛОНКА (1/3) --- #}
-        <div class="space-y-8">
             <div class="bg-white p-6 rounded-lg shadow-md">
                 <h2 class="text-xl font-semibold text-gray-700 mb-4 flex items-center">
                     <svg class="h-6 w-6 text-green-500 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>
@@ -70,7 +156,7 @@
                 <ul class="space-y-3">
                     {% for item in top_students %}
                     <li class="flex items-center justify-between p-2 rounded-md hover:bg-gray-50">
-                        <a href="{% url 'student_progress' item.student.id %}" class="flex items-center space-x-3">
+                        <a href="{% url 'core:student_progress' item.student.id %}" class="flex items-center space-x-3">
                             <div class="bg-green-100 text-green-600 font-bold rounded-full h-8 w-8 flex items-center justify-center text-sm">{{ forloop.counter }}</div>
                             <div>
                                 <p class="font-medium text-gray-800 text-sm">{{ item.student }}</p>
@@ -93,7 +179,7 @@
                 <ul class="space-y-3">
                     {% for item in worst_students %}
                     <li class="flex items-center justify-between p-2 rounded-md hover:bg-gray-50">
-                        <a href="{% url 'student_progress' item.student.id %}" class="flex items-center space-x-3">
+                        <a href="{% url 'core:student_progress' item.student.id %}" class="flex items-center space-x-3">
                              <div class="bg-red-100 text-red-600 font-bold rounded-full h-8 w-8 flex items-center justify-center text-sm">{{ forloop.revcounter }}</div>
                              <div>
                                 <p class="font-medium text-gray-800 text-sm">{{ item.student }}</p>
@@ -114,68 +200,108 @@
 
 {% block scripts %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
+
+
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-    // --- Анимация счетчиков ---
-    const counters = document.querySelectorAll('[data-count]');
-    counters.forEach(counter => {
-        const target = +counter.dataset.count;
-        if (isNaN(target)) return;
-        let current = 0;
-        const increment = target / 100;
+    Chart.register(ChartDataLabels);
+    Chart.defaults.plugins.datalabels.display = false; // Отключаем метки по умолчанию
 
-        const updateCounter = () => {
-            if (current < target) {
-                current += Math.max(increment, 1);
-                counter.innerText = Math.ceil(current);
-                requestAnimationFrame(updateCounter);
-            } else {
-                counter.innerText = target;
+    const datalabelsConfig = {
+        display: true,
+        anchor: 'end', align: 'end', color: '#4b5563',
+        font: { weight: 'bold', size: 12 },
+        formatter: (value) => Math.round(value),
+    };
+
+    // График Школ / Классов
+    const schoolChartLabels = {{ school_chart_labels|safe }};
+    if (schoolChartLabels && schoolChartLabels.length > 0) {
+        const schoolCtx = document.getElementById('schoolChart').getContext('2d');
+        new Chart(schoolCtx, {
+            type: 'bar',
+            data: {
+                labels: schoolChartLabels,
+                datasets: [{
+                    label: 'Средний балл',
+                    data: {{ school_chart_data|safe }},
+                    backgroundColor: 'rgba(79, 70, 229, 0.7)',
+                    borderColor: 'rgba(79, 70, 229, 1)',
+                    borderWidth: 1,
+                    borderRadius: 4,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false }, datalabels: datalabelsConfig },
+                scales: { y: { beginAtZero: true } }
             }
-        };
-        updateCounter();
-    });
+        });
+    }
 
-    // --- УСЛОВНАЯ ОТРИСОВКА ГРАФИКОВ ---
-    {% if user.is_superuser %}
-        // График для АДМИНИСТРАТОРА: Рейтинг школ
-        const schoolChartLabels = {{ school_chart_labels|safe }};
-        if (schoolChartLabels && schoolChartLabels.length > 0) {
-            const schoolCtx = document.getElementById('schoolChart').getContext('2d');
-            new Chart(schoolCtx, {
-                type: 'bar',
-                data: {
-                    labels: schoolChartLabels,
-                    datasets: [{
-                        label: 'Средний балл',
-                        data: {{ school_chart_data|safe }},
-                        backgroundColor: 'rgba(59, 130, 246, 0.8)',
-                        borderRadius: 5,
-                    }]
-                },
-                options: { indexAxis: 'y', responsive: true, plugins: { legend: { display: false } } }
-            });
-        }
-    {% else %}
-        // График для ДИРЕКТОРА: Рейтинг классов
-        const directorChartLabels = {{ director_chart_labels|safe }};
-        if (directorChartLabels && directorChartLabels.length > 0) {
-            const directorCtx = document.getElementById('directorClassChart').getContext('2d');
-            new Chart(directorCtx, {
-                type: 'bar',
-                data: {
-                    labels: directorChartLabels,
-                    datasets: [{
-                        label: 'Средний балл',
-                        data: {{ director_chart_data|safe }},
-                        backgroundColor: 'rgba(16, 185, 129, 0.8)',
-                        borderRadius: 5,
-                    }]
-                },
-                options: { responsive: true, plugins: { legend: { display: false } } }
-            });
-        }
-    {% endif %}
+    // График Предметов
+    const subjectChartLabels = {{ subject_chart_labels|safe }};
+    if (subjectChartLabels && subjectChartLabels.length > 0) {
+        const subjectCtx = document.getElementById('subjectChart').getContext('2d');
+        new Chart(subjectCtx, {
+            type: 'bar',
+            data: {
+                labels: subjectChartLabels,
+                datasets: [{
+                    label: 'Средний % выполнения',
+                    data: {{ subject_chart_data|safe }},
+                    backgroundColor: 'rgba(5, 150, 105, 0.7)',
+                    borderColor: 'rgba(5, 150, 105, 1)',
+                    borderWidth: 1,
+                    borderRadius: 4,
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false }, datalabels: datalabelsConfig },
+                scales: { x: { beginAtZero: true, max: 100 } }
+            }
+        });
+    }
+
+    // График Распределения успеваемости
+    const distributionData = {{ distribution_chart_data|safe }};
+    if (distributionData && distributionData.some(v => v > 0)) {
+        const distCtx = document.getElementById('performanceDistributionChart').getContext('2d');
+        new Chart(distCtx, {
+            type: 'doughnut',
+            data: {
+                labels: {{ distribution_chart_labels|safe }},
+                datasets: [{
+                    data: distributionData,
+                    backgroundColor: ['#22c55e', '#84cc16', '#facc15', '#ef4444'],
+                    borderColor: '#fff',
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'bottom', labels: { padding: 15, boxWidth: 12 } },
+                    datalabels: {
+                        display: true,
+                        color: '#fff',
+                        font: { weight: 'bold' },
+                        formatter: (value, ctx) => {
+                            let sum = ctx.chart.data.datasets[0].data.reduce((a, b) => a + b, 0);
+                            let percentage = (value * 100 / sum);
+                            return percentage > 5 ? percentage.toFixed(0) + '%' : '';
+                        }
+                    }
+                }
+            }
+        });
+    }
 });
 </script>
 {% endblock %}

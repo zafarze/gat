@@ -1,15 +1,12 @@
-{# D:\New_GAT\templates\components\_school_subject_table.html (НОВЫЙ ФАЙЛ) #}
-
+{# D:\New_GAT\templates\components\_school_subject_table.html (ИСПРАВЛЕННАЯ ВЕРСИЯ) #}
 <div class="mb-8">
     <div class="bg-white shadow-md rounded-lg overflow-x-auto">
-        
         <div class="p-4 flex justify-between items-center border-b">
             <h2 class="text-xl font-semibold text-gray-700">{{ school.name }}</h2>
-            <a href="{% url 'subject_add' %}?school={{ school.id }}" class="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors text-sm">
+            <a href="{% url 'core:subject_add' %}?school={{ school.id }}" class="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors text-sm">
                 + Добавить предмет в "{{ school.name }}"
             </a>
         </div>
-        
         <table class="min-w-full divide-y divide-gray-200">
             <thead class="bg-gray-50">
                 <tr>
@@ -28,8 +25,8 @@
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ subject.abbreviation }}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ subject.gat_info|default_if_none:"—" }}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-4">
-                        <a href="{% url 'subject_edit' subject.pk %}" class="text-indigo-600 hover:text-indigo-900">Редактировать</a>
-                        <a href="{% url 'subject_delete' subject.pk %}" class="text-red-600 hover:text-red-900">Удалить</a>
+                        <a href="{% url 'core:subject_edit' subject.pk %}" class="text-indigo-600 hover:text-indigo-900">Редактировать</a>
+                        <a href="{% url 'core:subject_delete' subject.pk %}" class="text-red-600 hover:text-red-900">Удалить</a>
                     </td>
                 </tr>
                 {% empty %}

@@ -1,9 +1,9 @@
-{# D:\New_GAT\templates\components\_school_class_table.html (НОВЫЙ ФАЙЛ) #}
+{# D:\New_GAT\templates\components\_school_class_table.html (ИСПРАВЛЕННАЯ ВЕРСИЯ) #}
 <div class="mb-8">
     <div class="bg-white shadow-md rounded-lg overflow-x-auto">
         <div class="p-4 flex justify-between items-center border-b">
             <h2 class="text-xl font-semibold text-gray-700">{{ school.name }}</h2>
-            <a href="{% url 'class_add' %}?school={{ school.id }}" class="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors text-sm">
+            <a href="{% url 'core:class_add' %}?school={{ school.id }}" class="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors text-sm">
                 + Добавить класс в "{{ school.name }}"
             </a>
         </div>
@@ -21,8 +21,8 @@
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ forloop.counter }}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ class_item.name }}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-4">
-                        <a href="{% url 'class_edit' class_item.pk %}" class="text-indigo-600 hover:text-indigo-900">Редактировать</a>
-                        <a href="{% url 'class_delete' class_item.pk %}" class="text-red-600 hover:text-red-900">Удалить</a>
+                        <a href="{% url 'core:class_edit' class_item.pk %}" class="text-indigo-600 hover:text-indigo-900">Редактировать</a>
+                        <a href="{% url 'core:class_delete' class_item.pk %}" class="text-red-600 hover:text-red-900">Удалить</a>
                     </td>
                 </tr>
                 {% empty %}
@@ -33,4 +33,4 @@
             </tbody>
         </table>
     </div>
-</div>
+</div>  

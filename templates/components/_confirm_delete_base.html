@@ -1,33 +1,29 @@
+{# templates/components/_confirm_delete_base.html (ИСПРАВЛЕННАЯ ВЕРСИЯ) #}
 {% extends "base.html" %}
 
 {% block title %}{{ title }}{% endblock %}
 
 {% block content %}
-<div class="flex justify-between items-center mb-6">
-    <div>
-        {# --- УЛУЧШЕНИЕ 1: Добавляем "хлебные крошки" для навигации --- #}
-        <a href="{% url cancel_url %}" class="text-indigo-600 hover:underline mb-2 inline-block">&larr; Отмена и возврат к списку</a>
-        <h1 class="text-3xl font-bold text-red-600">{{ title }}</h1>
-    </div>
-</div>
-
-<div class="bg-white p-8 rounded-lg shadow-md max-w-2xl">
-    <p class="text-lg text-gray-700">Вы уверены, что хотите удалить <strong>"{{ item }}"</strong>?</p>
-    <p class="text-gray-500 mt-2">Это действие нельзя будет отменить.</p>
-    
-    {# --- УЛУЧШЕНИЕ 2: Гибкий блок для дополнительных предупреждений --- #}
-    {% block extra_warning %}{% endblock %}
-    
-    <form method="post">
-        {% csrf_token %}
-        <div class="mt-8 flex justify-end space-x-4">
-            <a href="{% url cancel_url %}" class="bg-gray-200 text-gray-800 px-6 py-2 rounded-lg hover:bg-gray-300">
-                Нет, отменить
-            </a>
-            <button type="submit" class="bg-red-600 text-white px-6 py-2 rounded-lg hover:bg-red-700">
-                Да, подтверждаю удаление
-            </button>
+<div class="max-w-2xl mx-auto">
+    <div class="page-header">
+        <div>
+            {# ИСПРАВЛЕНО: Добавлен тег 'url' для переменной cancel_url #}
+            <a href="{% url cancel_url %}" class="back-link">&larr; Отмена и возврат к списку</a>
+            <h1 class="page-title mt-1 text-red-600">{{ title }}</h1>
         </div>
-    </form>
+    </div>
+
+    <div class="data-card p-8">
+        <p class="text-lg text-gray-700">Вы уверены, что хотите удалить <strong>"{{ item }}"</strong>?</p>
+        <p class="text-gray-500 mt-2">Это действие нельзя будет отменить.</p>
+        
+        {% block extra_warning %}{% endblock %}
+        
+        <form method="post" class="mt-8 flex justify-end space-x-4 border-t pt-5">
+            {# ИСПРАВЛЕНО: Добавлен тег 'url' для переменной cancel_url #}
+            <a href="{% url cancel_url %}" class="btn btn-secondary">Нет, отменить</a>
+            <button type="submit" class="btn btn-danger">Да, подтверждаю</button>
+        </form>
+    </div>
 </div>
 {% endblock %}

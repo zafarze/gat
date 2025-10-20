@@ -9,27 +9,36 @@
 <div class="flex flex-wrap justify-between items-center gap-4 mb-6 action-buttons">
     <div>
         <h1 class="text-3xl font-bold text-gray-800">{{ title }}</h1>
+        
+        {# ✨ ИСПРАВЛЕНИЕ 1: Заменено некорректное `test.school_class` на `test.school_classes.first` #}
         {% if test %}
-    <p class="text-sm text-gray-500 mt-1">
-        Тест: {{ test.name }} 
-        (Класс: 
-        {% if test.school_class.parent %}
-            {{ test.school_class.parent.name }}
-        {% else %}
-            {{ test.school_class.name }}
-        {% endif %})
-    </p>
-{% endif %}
+            {% with first_class=test.school_classes.first %}
+                {% if first_class %}
+                    <p class="text-sm text-gray-500 mt-1">
+                        Тест: {{ test.name }} 
+                        (Класс: 
+                        {% if first_class.parent %}
+                            {{ first_class.parent.name }}
+                        {% else %}
+                            {{ first_class.name }}
+                        {% endif %})
+                    </p>
+                {% endif %}
+            {% endwith %}
+        {% endif %}
+
     </div>
     <div class="flex items-center gap-3">
-        <button onclick="window.print()" class="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 text-sm font-medium">Печать</button>
-        <a href="{% url 'export_detailed_results_excel' test_number=test_number %}" class="bg-green-100 text-green-800 px-4 py-2 rounded-lg hover:bg-green-200 text-sm font-medium">Экспорт в Excel</a>
-        <a href="{% url 'export_detailed_results_pdf' test_number=test_number %}" class="bg-red-100 text-red-700 px-4 py-2 rounded-lg hover:bg-red-200 text-sm font-medium">Экспорт в PDF</a>
+        <button onclick="window.print()" class="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 text-sm font-medium no-print">Печать</button>
+        
+        {# ✨ ИСПРАВЛЕНИЕ 2: Добавлен `?{{ request.GET.urlencode }}` для сохранения фильтров при экспорте #}
+        <a href="{% url 'core:export_detailed_results_excel' test_number %}?{{ request.GET.urlencode }}" class="bg-green-100 text-green-800 px-4 py-2 rounded-lg hover:bg-green-200 text-sm font-medium no-print">Экспорт в Excel</a>
+        <a href="{% url 'core:export_detailed_results_pdf' test_number %}?{{ request.GET.urlencode }}" class="bg-red-100 text-red-700 px-4 py-2 rounded-lg hover:bg-red-200 text-sm font-medium no-print">Экспорт в PDF</a>
     </div>
 </div>
 
 {# --- Подключаем компонент с таблицей --- #}
-<div class="bg-white shadow-md rounded-lg overflow-x-auto">
+<div class="bg-white shadow-md rounded-lg overflow-x-auto content-to-print">
     {% include 'results/includes/detailed_table.html' %}
 </div>
 
