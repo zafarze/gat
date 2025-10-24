@@ -699,9 +699,6 @@ def _get_grade_and_subjects_performance(result, subject_map):
     student_class = result.student.school_class
     parent_class = student_class.parent if student_class.parent else student_class
 
-    # --- ✨ ИСПРАВЛЕНИЯ ЗДЕСЬ ✨ ---
-    # Мы больше не используем class_subjects, а сразу создаем карту
-    # с количеством вопросов для параллели этого ученика
     q_counts_parallel = {
         qc.subject_id: qc.number_of_questions
         for qc in QuestionCount.objects.filter(school_class=parent_class)
@@ -710,38 +707,61 @@ def _get_grade_and_subjects_performance(result, subject_map):
     total_student_score = 0
     total_max_score = 0
     subject_performance = []
-    processed_scores = []
+    processed_scores = [] # <-- Эта переменная будет заполнена и возвращена
 
     if isinstance(result.scores_by_subject, dict):
         for subj_id_str, answers_dict in result.scores_by_subject.items():
             try:
                 subj_id = int(subj_id_str)
                 subject_name = subject_map.get(subj_id)
-                # Получаем макс. кол-во вопросов из созданной выше карты
                 q_count_for_subject = q_counts_parallel.get(subj_id, 0)
 
                 if subject_name and isinstance(answers_dict, dict):
                     correct_q = sum(1 for answer in answers_dict.values() if answer is True)
-                    
-                    # Суммируем баллы для расчета общей оценки
+                    total_q = len(answers_dict) # Используем длину словаря для total
+
                     total_student_score += correct_q
                     total_max_score += q_count_for_subject
 
                     if q_count_for_subject > 0:
                         perf = (correct_q / q_count_for_subject) * 100
                         subject_performance.append({'name': subject_name, 'perf': perf})
-                        # (остальная часть логики для processed_scores...)
+
+                        # --- ✨ ДОБАВЛЕН РАСЧЕТ ОЦЕНКИ ПО ПРЕДМЕТУ ✨ ---
+                        grade_for_subject = utils.calculate_grade_from_percentage(perf)
+                        # --- ✨ КОНЕЦ ДОБАВЛЕНИЯ ✨ ---
+
+                        # --- ✨ ДОБАВЛЕНА СОРТИРОВКА ОТВЕТОВ ПО НОМЕРУ ВОПРОСА ✨ ---
+                        # Превращаем {'10': False, '1': True, '2': True}
+                        # в [('1', True), ('2', True), ('10', False)]
+                        sorted_answers = sorted(
+                            answers_dict.items(),
+                            key=lambda item: int(item[0]) # Сортируем по числовому значению ключа
+                        )
+                        # --- ✨ КОНЕЦ СОРТИРОВКИ ✨ ---
+
+                        # Добавляем все нужные данные в processed_scores
+                        processed_scores.append({
+                            'subject': subject_name,
+                            'answers': sorted_answers, # <-- Передаем отсортированный СПИСОК ПАР
+                            'correct': correct_q,
+                            'total': total_q, # Передаем реальное кол-во ответов
+                            'max_possible': q_count_for_subject, # Макс. балл
+                            'incorrect': total_q - correct_q,
+                            'percentage': round(perf, 1),
+                            'grade': grade_for_subject # <-- Добавили оценку
+                        })
             except (ValueError, TypeError):
                 continue
 
     overall_percentage = (total_student_score / total_max_score) * 100 if total_max_score > 0 else 0
     grade = utils.calculate_grade_from_percentage(overall_percentage)
-    
+
     best_subject = max(subject_performance, key=lambda x: x['perf']) if subject_performance else None
     worst_subject = min(subject_performance, key=lambda x: x['perf']) if subject_performance else None
-    
-    # Возвращаем только то, что нужно в student_progress_view
-    return grade, best_subject, worst_subject, []
+
+    # Возвращаем заполненный processed_scores
+    return grade, best_subject, worst_subject, processed_scores
 
 # =============================================================================
 # --- ОЧИСТКА ДАННЫХ (ТОЛЬКО ДЛЯ СУПЕРПОЛЬЗОВАТЕЛЯ) ---

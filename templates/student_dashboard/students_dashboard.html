@@ -94,11 +94,16 @@
                                         </div>
                                     </div>
                                     <div class="flex flex-wrap items-center gap-1">
+                                        
+                                        {# --- ✨ ИСПРАВЛЕНИЕ ЗДЕСЬ (ДВОЙНОЕ) ✨ --- #}
                                         {% for answer in score.answers %}
-                                            <span class="h-5 w-5 rounded-full flex items-center justify-center text-xs font-bold text-white {% if answer %}bg-green-500{% else %}bg-red-500{% endif %}">
-                                               {{ forloop.counter }}
+                                            <span class="h-5 w-5 rounded-full flex items-center justify-center text-xs font-bold text-white 
+                                                  {% if answer.1 %}bg-green-500{% else %}bg-red-500{% endif %}">
+                                               {{ answer.0 }}
                                             </span>
                                         {% endfor %}
+                                        {# --- ✨ КОНЕЦ ИСПРАВЛЕНИЯ ✨ --- #}
+                                    
                                     </div>
                                 </div>
                             {% endfor %}

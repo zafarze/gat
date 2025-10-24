@@ -2,7 +2,7 @@
 <div class="flex flex-col h-full bg-white rounded-xl shadow-2xl max-h-[90vh]">
     {# ✨ ИЗМЕНЕНИЕ: Форма теперь отправляет запрос на тот же URL, с которого загружена #}
     {# ✨ Цель и swap для обновления списка теперь задаются в Python view (crud.py) #}
-    <form hx-post="{{ request.path }}">
+    <form hx-post="{{ request.path }}" hx-on::after-request="htmx.trigger('body', 'force-refresh')">
 
         <div class="p-6 border-b flex justify-between items-center">
             <h2 class="text-2xl font-bold text-gray-800">{{ title }}</h2>

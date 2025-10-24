@@ -1,4 +1,4 @@
-# D:\New_GAT\config\urls.py (ИСПРАВЛЕННАЯ ВЕРСИЯ)
+# D:\New_GAT\config\urls.py
 
 from django.contrib import admin
 from django.urls import path, include
@@ -6,14 +6,25 @@ from django.conf import settings
 from django.conf.urls.static import static
 
 urlpatterns = [
+    # --- Django Admin ---
     path('admin/', admin.site.urls),
+
+    # --- Приложение accounts (для входа/выхода/регистрации/профиля) ---
+    # Мы используем встроенные URL Django для аутентификации,
+    # но можно добавить свои, если нужно (например, для регистрации)
+    # path('accounts/', include('django.contrib.auth.urls')), # Стандартные URL Django Auth
+    # path('accounts/', include('accounts.urls')), # Если у вас есть свое приложение accounts с доп. URL
+
+    # --- Приложение core (основное приложение) ---
+    # ✨✨✨ ИСПРАВЛЕНИЕ ЗДЕСЬ ✨✨✨
+    # Убираем префикс 'dashboard/', чтобы URL начинались с корня сайта
     path('', include('core.urls')),
+    # ✨✨✨ КОНЕЦ ИСПРАВЛЕНИЯ ✨✨✨
 ]
 
-# Этот блок будет работать только в режиме разработки (DEBUG=True)
+# --- Настройки для раздачи медиафайлов в режиме разработки (DEBUG=True) ---
 if settings.DEBUG:
-    # Оставляем только маршрут для медиа-файлов
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
-    
-    # Строку для статики мы убрали, так как Django обрабатывает её автоматически
-    # при DEBUG=True, если 'django.contrib.staticfiles' есть в INSTALLED_APPS.
+    # Можно добавить staticfiles_urlpatterns, если Whitenoise не используется
+    # from django.contrib.staticfiles.urls import staticfiles_urlpatterns
+    # urlpatterns += staticfiles_urlpatterns()

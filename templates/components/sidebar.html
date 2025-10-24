@@ -1,15 +1,23 @@
 {# D:\New_GAT\templates\components\sidebar.html (ПОЛНАЯ ИСПРАВЛЕННАЯ ВЕРСИЯ) #}
+{% load static %}
 <div class="flex flex-col h-full bg-gray-800 text-white overflow-hidden">
 
-    <div class="flex items-center justify-between h-16 flex-shrink-0 px-4 bg-gray-900">
-        <span class="text-white font-bold text-lg whitespace-nowrap transition-opacity duration-200" :class="{'opacity-100': !sidebarCollapsed, 'opacity-0': sidebarCollapsed}">GAT Report</span>
+    <div class="relative flex items-center justify-between h-32 flex-shrink-0 px-4 bg-gray-900">
+
+        <div class="flex items-center transition-opacity duration-300"
+             :class="{'opacity-100': !sidebarCollapsed, 'opacity-0': sidebarCollapsed, 'pointer-events-none': sidebarCollapsed}">
+            
+            <img src="{% static 'img/logowhite.png' %}" alt="ANDARZ Logo" class="h-10 w-auto"> <div class="flex flex-col items-start leading-tight ml-3">
+                <span class="text-white font-bold text-lg tracking-wide">ANDARZ</span>
+                <span class="text-gray-400 text-sm">GAT Report</span>
+            </div>
+        </div>
 
         <button @click="sidebarCollapsed = !sidebarCollapsed" class="hidden md:block p-1 rounded-md hover:bg-gray-700 focus:outline-none">
             <svg x-show="!sidebarCollapsed" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg>
             <svg x-show="sidebarCollapsed" style="display: none;" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
         </button>
     </div>
-
     <div class="flex-1 overflow-y-auto">
         <nav class="px-2 py-4 space-y-2">
             {% with request.resolver_match.url_name as url_name %}
