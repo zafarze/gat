@@ -50,11 +50,9 @@ def get_report_context(get_params, request_user, mode='monitoring'):
         subjects_filter_from_form = form.cleaned_data.get('subjects')
         days_selected = form.cleaned_data.get('days', []) # Получаем список дней
 
-        # --- ✨ ЛОГИКА ГРУППИРОВКИ ✨ ---
-        # Группируем, если:
-        # 1. Это 'monitoring' (а не 'grading')
-        # 2. Выбран НЕ 1 день (т.е. выбраны 0 или 2 дня)
-        if mode == 'monitoring' and len(days_selected) != 1:
+        # --- ✨✨✨ ИСПРАВЛЕНИЕ 1: Группируем для ВСЕХ режимов ✨✨✨ ---
+        # Группируем, если выбраны 0 или 2 дня
+        if len(days_selected) != 1:
             should_group_days = True
         # ---
 
@@ -177,12 +175,12 @@ def get_report_context(get_params, request_user, mode='monitoring'):
     # --- ✨ 3. Формирование строк таблицы (`table_rows`) С РАЗДЕЛЬНОЙ ЛОГИКОЙ ---
     if results_qs.exists():
         
-        # --- ЛОГИКА A: Группируем дни (Monitoring, 0 или 2 дня) ---
+        # --- ЛОГИКА A: Группируем дни (0 или 2 дня выбрано) ---
         if should_group_days:
             grouped_rows = defaultdict(lambda: {
+                # 'scores_by_subject' хранит суммарные баллы и макс. балл
                 'scores_by_subject': defaultdict(lambda: {'score': 0, 'total': 0}),
-                'grades_by_subject': {}, # Не используется в monitoring, но для консистентности
-                'total_score': 0,
+                'total_score': 0, # Сумма баллов (для monitoring)
             })
             student_map = {} # Кэш для объектов Student
 
@@ -204,12 +202,13 @@ def get_report_context(get_params, request_user, mode='monitoring'):
                     answers = result.scores_by_subject.get(subject_id_str)
                     q_count = q_counts.get((subject_id, result.student.school_class_id), 0)
 
+                    # Сохраняем для отображения в ячейках
+                    current_score_data = grouped_rows[key]['scores_by_subject'][subject_id]
+                    
                     if answers is not None and isinstance(answers, dict):
                         score = sum(1 for v in answers.values() if v is True)
                         grouped_rows[key]['total_score'] += score
                         
-                        # Сохраняем для отображения в ячейках
-                        current_score_data = grouped_rows[key]['scores_by_subject'][subject_id]
                         current_score_data['score'] += score
                         current_score_data['total'] = q_count # q_count одинаковый для параллели
                     
@@ -217,7 +216,6 @@ def get_report_context(get_params, request_user, mode='monitoring'):
                         # НЕ устанавливаем 'score': '—'. 
                         # defaultdict уже установил 'score': 0.
                         # Нам нужно только установить 'total' (q_count).
-                        current_score_data = grouped_rows[key]['scores_by_subject'][subject_id]
                         current_score_data['total'] = q_count
 
             # Конвертируем сгруппированные данные в `table_rows`
@@ -228,7 +226,6 @@ def get_report_context(get_params, request_user, mode='monitoring'):
                 # Создаем "фейковый" объект result_obj, чтобы шаблон `monitoring.html` работал
                 fake_test_name = f"GAT-{test_number} (Total)"
                 
-                # --- ✨✨✨ ВОТ ИСПРАВЛЕНИЕ ✨✨✨ ---
                 # Добавляем .test_number и .day для функции сортировки (sort_key_lambda)
                 fake_test = SimpleNamespace(
                     name=fake_test_name,
@@ -236,18 +233,43 @@ def get_report_context(get_params, request_user, mode='monitoring'):
                     day=0                    # <-- ДОБАВЛЕНО (безопасное значение для сортировки)
                 )
                 fake_result_obj = SimpleNamespace(gat_test=fake_test)
-                # --- ✨✨✨ КОНЕЦ ИСПРАВЛЕНИЯ ✨✨✨ ---
+
+                # --- ✨✨✨ ИСПРАВЛЕНИЕ 2: Считаем оценки для сгруппированных данных ✨✨✨ ---
+                final_grades_by_subject = {}
+                total_grade_points = 0
+                subjects_in_row = 0
+
+                if mode == 'grading':
+                    for subject_id, score_data in data['scores_by_subject'].items():
+                        score = score_data['score']
+                        total = score_data['total'] # total - это q_count
+                        
+                        if total > 0:
+                            percentage = (score / total) * 100
+                            grade = grade_utils.calculate_grade_from_percentage(percentage)
+                            final_grades_by_subject[subject_id] = grade
+                            total_grade_points += grade
+                            subjects_in_row += 1
+                        else:
+                            final_grades_by_subject[subject_id] = "—"
                 
+                # Определяем, какой total_score использовать
+                if mode == 'grading':
+                    final_total_score = total_grade_points if subjects_in_row > 0 else 0
+                else: # mode == 'monitoring'
+                    final_total_score = data['total_score']
+                # --- ✨✨✨ КОНЕЦ ИСПРАВЛЕНИЯ 2 ✨✨✨ ---
+
                 table_rows.append({
                     'student': student_obj,
                     'result_obj': fake_result_obj, # Передаем фейковый объект
-                    'scores_by_subject': data['scores_by_subject'],
-                    'grades_by_subject': {}, # Не используется
-                    'total_score': data['total_score'],
+                    'scores_by_subject': data['scores_by_subject'],  # Для monitoring
+                    'grades_by_subject': final_grades_by_subject, # <-- Теперь заполняется для grading
+                    'total_score': final_total_score, # <-- Используется правильный total
                     'has_both_days': (student_id, test_number) in students_with_both_days
                 })
 
-        # --- ЛОГИКА B: Не группируем (Grading или 1 день) ---
+        # --- ЛОГИКА B: Не группируем (1 день выбран) ---
         else:
             for result in results_qs.distinct().select_related('student__school_class', 'gat_test'):
                 if not (result.student and result.student.school_class and isinstance(result.scores_by_subject, dict)):
