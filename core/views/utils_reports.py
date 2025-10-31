@@ -1,4 +1,4 @@
-# D:\New_GAT\core\views\utils_reports.py (ИСПРАВЛЕННАЯ ВЕРСИЯ)
+# D:\New_GAT\core\views\utils_reports.py (ПОЛНАЯ ИСПРАВЛЕННАЯ ВЕРСИЯ)
 
 from collections import defaultdict
 # ✨ 1. Добавляем SimpleNamespace для создания "фейковых" объектов
@@ -227,8 +227,16 @@ def get_report_context(get_params, request_user, mode='monitoring'):
                 
                 # Создаем "фейковый" объект result_obj, чтобы шаблон `monitoring.html` работал
                 fake_test_name = f"GAT-{test_number} (Total)"
-                fake_test = SimpleNamespace(name=fake_test_name)
+                
+                # --- ✨✨✨ ВОТ ИСПРАВЛЕНИЕ ✨✨✨ ---
+                # Добавляем .test_number и .day для функции сортировки (sort_key_lambda)
+                fake_test = SimpleNamespace(
+                    name=fake_test_name,
+                    test_number=test_number, # <-- ДОБАВЛЕНО
+                    day=0                    # <-- ДОБАВЛЕНО (безопасное значение для сортировки)
+                )
                 fake_result_obj = SimpleNamespace(gat_test=fake_test)
+                # --- ✨✨✨ КОНЕЦ ИСПРАВЛЕНИЯ ✨✨✨ ---
                 
                 table_rows.append({
                     'student': student_obj,
