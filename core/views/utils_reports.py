@@ -75,8 +75,9 @@ def get_report_context(get_params, request_user, mode='monitoring'):
             title_details['test_type'] = ", ".join([f"GAT-{num}" for num in test_numbers])
         
         # Фильтр по дням применяется, ТОЛЬКО если мы не группируем
-        if days := days_selected and not should_group_days:
-            valid_form_filters &= Q(gat_test__day__in=days)
+        if days_selected and not should_group_days:
+            # Используем `days_selected` (который является списком), а не `days`
+            valid_form_filters &= Q(gat_test__day__in=days_selected)
 
     results_qs = base_results_qs.filter(valid_form_filters)
 
@@ -213,8 +214,11 @@ def get_report_context(get_params, request_user, mode='monitoring'):
                         current_score_data['total'] = q_count # q_count одинаковый для параллели
                     
                     elif subject_id not in grouped_rows[key]['scores_by_subject']:
-                        # Если предмета еще нет, инициализируем с '—'
-                         grouped_rows[key]['scores_by_subject'][subject_id] = {'score': '—', 'total': q_count}
+                        # НЕ устанавливаем 'score': '—'. 
+                        # defaultdict уже установил 'score': 0.
+                        # Нам нужно только установить 'total' (q_count).
+                        current_score_data = grouped_rows[key]['scores_by_subject'][subject_id]
+                        current_score_data['total'] = q_count
 
             # Конвертируем сгруппированные данные в `table_rows`
             for (student_id, test_number), data in grouped_rows.items():
