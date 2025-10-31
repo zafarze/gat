@@ -174,9 +174,16 @@ class SchoolClassForm(BaseForm):
 class SubjectForm(BaseForm):
     class Meta:
         model = Subject
+        # ВОЗВРАЩАЕМ поле 'abbreviation' в список fields
         fields = ['name', 'abbreviation']
+        widgets = {
+            'name': forms.TextInput(attrs={'class': input_class}), # Используем input_class из BaseForm
+            # ВОЗВРАЩАЕМ виджет для 'abbreviation'
+            'abbreviation': forms.TextInput(attrs={'class': input_class}),
+        }
         labels = {
             'name': 'Название предмета',
+            # ВОЗВРАЩАЕМ метку для 'abbreviation'
             'abbreviation': 'Сокращение'
         }
 

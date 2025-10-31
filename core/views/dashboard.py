@@ -83,22 +83,76 @@ def _get_performance_chart_data(user, base_qs):
     return json.dumps(labels, ensure_ascii=False), json.dumps(data)
 
 def _get_subject_chart_data(base_qs):
-    """Готовит данные для графика предметов из JSON-поля `scores_by_subject`."""
+    """
+    Готовит данные для графика предметов из JSON-поля `scores_by_subject`.
+    ИСПРАВЛЕННАЯ ВЕРСИЯ: Читает формат {"subject_id": {"1": True, "2": False}}
+    """
     subject_performance = defaultdict(lambda: {'correct': 0, 'total': 0})
 
-    for result in base_qs:
+    # Оптимизация: загружаем из БД только поле scores_by_subject
+    for result in base_qs.only('scores_by_subject'):
         if isinstance(result.scores_by_subject, dict):
-            for subject_id_str, answers in result.scores_by_subject.items():
-                if answers: # Проверяем, что список ответов не пуст
+            
+            # Итерируем по { "id_предмета": {"1": True, "2": False} }
+            for subject_id_str, answers_dict in result.scores_by_subject.items():
+                
+                # ИСПРАВЛЕНИЕ: Проверяем, что 'answers' - это СЛОВАРЬ (dict), а не список
+                if answers_dict and isinstance(answers_dict, dict): 
                     try:
                         subject_id = int(subject_id_str)
-                        subject_performance[subject_id]['correct'] += sum(answers)
-                        subject_performance[subject_id]['total'] += len(answers)
+                        
+                        # ИСПРАВЛЕНИЕ: Считаем True в словаре ответов
+                        correct_count = sum(1 for was_correct in answers_dict.values() if was_correct is True)
+                        
+                        # ИСПРАВЛЕНИЕ: Общее число - это кол-во ключей в словаре
+                        total_count = len(answers_dict)
+
+                        subject_performance[subject_id]['correct'] += correct_count
+                        subject_performance[subject_id]['total'] += total_count
+                        
                     except (ValueError, TypeError):
                         continue # Пропускаем некорректные ключи или значения
 
     if not subject_performance:
         return json.dumps([]), json.dumps([])
+
+    subject_map = {s.id: s.name for s in Subject.objects.filter(id__in=subject_performance.keys())}
+
+    subject_avg_scores = []
+    for subject_id, data in subject_performance.items():
+        if data['total'] > 0 and subject_id in subject_map:
+            avg_percent = (data['correct'] / data['total']) * 100
+            subject_avg_scores.append({'name': subject_map[subject_id], 'avg_score': round(avg_percent, 1)})
+
+    # Сортируем и берем топ-10
+    top_subjects = sorted(subject_avg_scores, key=lambda x: x['avg_score'], reverse=True)[:10]
+    
+    # Сортируем топ-10 по возрастанию для лучшего отображения на графике
+    top_subjects.sort(key=lambda x: x['avg_score']) 
+
+    labels = [s['name'] for s in top_subjects]
+    data = [s['avg_score'] for s in top_subjects]
+
+    return json.dumps(labels, ensure_ascii=False), json.dumps(data)
+
+    subject_map = {s.id: s.name for s in Subject.objects.filter(id__in=subject_performance.keys())}
+
+    subject_avg_scores = []
+    for subject_id, data in subject_performance.items():
+        if data['total'] > 0 and subject_id in subject_map:
+            avg_percent = (data['correct'] / data['total']) * 100
+            subject_avg_scores.append({'name': subject_map[subject_id], 'avg_score': round(avg_percent, 1)})
+
+    # Сортируем и берем топ-10
+    top_subjects = sorted(subject_avg_scores, key=lambda x: x['avg_score'], reverse=True)[:10]
+    
+    # Сортируем топ-10 по возрастанию для лучшего отображения на графике
+    top_subjects.sort(key=lambda x: x['avg_score']) 
+
+    labels = [s['name'] for s in top_subjects]
+    data = [s['avg_score'] for s in top_subjects]
+
+    return json.dumps(labels, ensure_ascii=False), json.dumps(data)
 
     subject_map = {s.id: s.name for s in Subject.objects.filter(id__in=subject_performance.keys())}
 

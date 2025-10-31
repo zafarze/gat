@@ -1,69 +1,65 @@
-<div id="school-card-{{ school.id }}" class="data-card p-6">
-    <div class="flex justify-between items-center mb-4">
-        <h2 class="text-xl font-bold text-gray-800">{{ school.name }}</h2>
-        {# ✨ ИЗМЕНЕНИЕ: Оборачиваем кнопку "Добавить" в условие ✨ #}
-        {% if user.is_superuser %}
-            {% if add_url %} {# Доп. проверка, что add_url передан #}
-            <button @click="showModal = true"
-                    hx-get="{% url add_url %}?school={{ school.pk }}"
-                    hx-target="#modal-content"
-                    class="modern-btn primary small flex items-center gap-1.5">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" /></svg>
-                <span>Добавить класс</span>
-            </button>
+{# core/templates/classes/_school_card.html #}
+
+{# This table displays the classes for a single school. #}
+{# It expects a 'school' object passed from the parent template (list.html). #}
+{# It also expects 'edit_url', 'delete_url', and 'user' variables. #}
+
+<table class="min-w-full">
+    {# Thead is visually hidden (sr-only) because the school name is already displayed #}
+    {# in the card header above this table in list.html. #}
+    <thead class="bg-gray-50 sr-only">
+        <tr>
+            <th class="table-header w-16">№</th> {# Column for row number #}
+            <th class="table-header">Название класса</th> {# Column for class name #}
+            {# Actions column header - only relevant if actions are shown #}
+            {% if user.is_superuser or user.profile.is_director %}
+                <th class="table-header text-right w-48">Действия</th>
             {% endif %}
-        {% endif %}
-        {# ✨ КОНЕЦ ИЗМЕНЕНИЯ ✨ #}
-    </div>
+        </tr>
+    </thead>
 
-    <div class="border border-gray-200 rounded-lg overflow-x-auto">
-        <table class="min-w-full">
-            <thead class="bg-gray-50">
-                <tr>
-                    <th class="table-header w-16">№</th>
-                    <th class="table-header">Название класса</th>
-                    {# ✨ ИЗМЕНЕНИЕ: Оборачиваем заголовок "Действия" в условие ✨ #}
-                    {% if user.is_superuser %}
-                    <th class="table-header text-right">Действия</th>
-                    {% endif %}
-                </tr>
-            </thead>
+    {# The table body - this is where HTMX will target updates for this specific school #}
+    {# The ID includes the school's primary key to make it unique #}
+    <tbody id="class-table-body-{{ school.pk }}" class="bg-white divide-y divide-gray-200">
+        {# Loop through all classes associated with the 'school' object. #}
+        {# 'school.classes.all' uses the related_name='classes' from the SchoolClass model's ForeignKey to School. #}
+        {% for class_item in school.classes.all %}
+            <tr class="hover:bg-gray-50 transition-colors">
+                {# Row number #}
+                <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 border-r border-gray-200">{{ forloop.counter }}</td>
+                {# Class name #}
+                <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 border-r border-gray-200">
+                    {{ class_item.name }}
+                </td>
 
-            <tbody class="bg-white divide-y divide-gray-200">
-                {% for class in school.classes.all %}
-                <tr class="hover:bg-gray-50 transition-colors">
-                    <td class="table-cell">{{ forloop.counter }}</td>
-                    <td class="table-cell font-medium text-gray-900">{{ class.name }}</td>
-
-                    {# ✨ ИЗМЕНЕНИЕ: Оборачиваем всю ячейку действий в условие ✨ #}
-                    {% if user.is_superuser %}
+                {# Actions column - only shown to Superusers or Directors #}
+                {% if user.is_superuser or user.profile.is_director %}
                     <td class="px-4 py-3 whitespace-nowrap text-right text-sm font-medium">
-                        <button @click="showModal = true"
-                                hx-get="{% url 'core:class_edit' class.pk %}"
+                        {# Edit button - triggers HTMX GET request to load the edit form into the modal #}
+                        <button @click.stop="showModal = true" {# Use .stop to prevent card collapse #}
+                                hx-get="{% url edit_url class_item.pk %}"
                                 hx-target="#modal-content"
                                 class="modern-btn secondary small">
                             Редактировать
                         </button>
-                        <button @click="showDeleteModal = true;
-                                       deleteUrl = '{% url 'core:class_delete' class.pk %}';
-                                       deleteItemName = '{{ class.name|escapejs }}';
-                                       deleteTargetId = '#school-card-{{ school.id }}';"
+                        {# Delete button - sets Alpine.js variables for the delete confirmation modal #}
+                        <button @click.stop="showDeleteModal = true; {# Use .stop #}
+                                        deleteUrl = '{% url delete_url class_item.pk %}';
+                                        deleteItemName = '{{ class_item.name|escapejs }}';"
                                 class="modern-btn danger small ml-2">
                             Удалить
                         </button>
                     </td>
-                    {% endif %}
-                    {# ✨ КОНЕЦ ИЗМЕНЕНИЯ ✨ #}
-                </tr>
-                {% empty %}
-                <tr>
-                    {# ✨ ИЗМЕНЕНИЕ: Динамический colspan ✨ #}
-                    <td colspan="{% if user.is_superuser %}3{% else %}2{% endif %}" class="px-4 py-6 text-center text-sm text-gray-500">
-                        В этой школе пока нет классов.
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-</div>
+                {% endif %}
+            </tr>
+        {% empty %}
+            {# Row displayed if a school has no classes #}
+            <tr>
+                {# Colspan adjusts based on whether the actions column is visible #}
+                <td colspan="{% if user.is_superuser or user.profile.is_director %}3{% else %}2{% endif %}" class="px-4 py-6 text-center text-sm text-gray-500">
+                    В этой школе пока нет классов.
+                </td>
+            </tr>
+        {% endfor %}
+    </tbody>
+</table>

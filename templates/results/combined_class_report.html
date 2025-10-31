@@ -5,13 +5,35 @@
 {# --- Кнопка "Назад" --- #}
 <a href="{% url 'core:archive_subclasses' quarter.id parent_class.school.id parent_class.id %}" class="text-indigo-600 hover:underline mb-4 inline-block">&larr; Назад к выбору класса</a>
 
-<div class="flex justify-between items-center mb-6 action-buttons">
+{# --- ОСНОВНОЙ ЗАГОЛОВОК И КНОПКА ПЕЧАТИ --- #}
+<div class="flex flex-wrap justify-between items-center gap-4 mb-6 action-buttons">
     <div>
         <h1 class="text-3xl font-bold text-gray-800">{{ title }}</h1>
         <p class="text-sm text-gray-500">Четверть: {{ quarter.name }}</p>
     </div>
+    {# --- КНОПКА ПЕЧАТИ ОСТАЕТСЯ ЗДЕСЬ --- #}
     <button onclick="window.print()" class="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 text-sm font-medium no-print">Печать</button>
 </div>
+
+{# --- ✨✨✨ НАЧАЛО ИЗМЕНЕНИЯ ✨✨✨ --- #}
+{# --- ВЫНОСИМ ФОРМУ В ОТДЕЛЬНЫЙ БЛОК НИЖЕ ЗАГОЛОВКА --- #}
+<div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200 mb-6 no-print"> {# Добавляем стили и no-print #}
+    <form method="get" action="" class="flex items-center space-x-4"> {# Увеличиваем space-x для отступа #}
+        <div> {# Оборачиваем в div для выравнивания #}
+            <label for="gat_number" class="block text-sm font-medium text-gray-700">Выберите тест:</label> {# Меняем текст метки #}
+            <select name="gat_number" id="gat_number"
+                    onchange="this.form.submit()"
+                    class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"> {# Используем стили как в другом шаблоне #}
+                {% for value, name in gat_number_choices %}
+                    <option value="{{ value }}" {% if value == selected_gat_number %}selected{% endif %}>
+                        {{ name }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+    </form>
+</div>
+{# --- ✨✨✨ КОНЕЦ ИЗМЕНЕНИЯ ✨✨✨ --- #}
 
 <div x-data="{ activeTab: 'total' }">
     <div class="border-b border-gray-200 mb-6 no-print">
@@ -21,69 +43,36 @@
                     class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
                 Итоговый рейтинг
             </button>
-            <button @click="activeTab = 'gat1'"
-                    :class="{ 'border-indigo-500 text-indigo-600': activeTab === 'gat1', 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300': activeTab !== 'gat1' }"
+            <button @click="activeTab = 'day1'"
+                    :class="{ 'border-indigo-500 text-indigo-600': activeTab === 'day1', 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300': activeTab !== 'day1' }"
                     class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
-                GAT-1
+                День 1
             </button>
-            <button @click="activeTab = 'gat2'"
-                    :class="{ 'border-indigo-500 text-indigo-600': activeTab === 'gat2', 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300': activeTab !== 'gat2' }"
+            <button @click="activeTab = 'day2'"
+                    :class="{ 'border-indigo-500 text-indigo-600': activeTab === 'day2', 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300': activeTab !== 'day2' }"
                     class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
-                GAT-2
+                День 2
             </button>
         </nav>
     </div>
 
+    {# --- Содержимое вкладок остается без изменений --- #}
     <div class="bg-white shadow-md rounded-lg overflow-x-auto content-to-print">
-        
         <div x-show="activeTab === 'total'">
-            <table class="min-w-full divide-y divide-gray-200">
-                <thead class="bg-gray-50">
-                    <tr>
-                        <th class="table-header">Место</th>
-                        <th class="table-header">Ф.И.О</th>
-                        <th class="table-header">Класс</th>
-                        <th class="table-header text-center">Прогресс</th>
-                        <th class="table-header text-center">GAT-1</th>
-                        <th class="table-header text-center">GAT-2</th>
-                        <th class="table-header text-center">Общий балл</th>
-                    </tr>
-                </thead>
-                <tbody class="bg-white divide-y divide-gray-200">
-                    {% for data in students_data %}
-                    <tr class="hover:bg-gray-50">
-                        <td class="table-cell font-bold text-lg text-center">
-                            {% if forloop.counter == 1 %}🥇{% elif forloop.counter == 2 %}🥈{% elif forloop.counter == 3 %}🥉{% else %}{{ forloop.counter }}{% endif %}
-                        </td>
-                        <td class="table-cell font-medium">{{ data.student.full_name_ru }}</td>
-                        <td class="table-cell text-center">{{ data.student.school_class.name }}</td>
-                        <td class="table-cell text-center">
-                            {% if data.progress is not None %}<span class="font-semibold {% if data.progress > 0 %}text-green-600{% elif data.progress < 0 %}text-red-600{% else %}text-gray-500{% endif %}">{{ data.progress }}</span>{% else %}<span class="text-gray-400">—</span>{% endif %}
-                        </td>
-                        <td class="table-cell text-center {% if data.score1 is None %}text-gray-400{% endif %}">{{ data.score1|default:"—" }}</td>
-                        <td class="table-cell text-center {% if data.score2 is None %}text-gray-400{% endif %}">{{ data.score2|default:"—" }}</td>
-                        <td class="table-cell text-center font-bold text-indigo-600">{{ data.total_score|default:"—" }}</td>
-                    </tr>
-                    {% empty %}
-                    <tr><td colspan="7" class="text-center py-10 text-gray-500">Нет данных для отображения.</td></tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+            {% include 'results/includes/total_table.html' with students_data=students_data_total header1="День 1" header2="День 2" %}
         </div>
-
-        <div x-show="activeTab === 'gat1'">
-            {% if test_gat1 and students_data_gat1 %}
-                {% include 'results/includes/detailed_table.html' with students_data=students_data_gat1 table_header=table_header_gat1 %}
+        <div x-show="activeTab === 'day1'">
+            {% if test_day1 and students_data_day1 %}
+                {% include 'results/includes/detailed_table.html' with students_data=students_data_day1 table_header=table_header_day1 %}
             {% else %}
-                 <p class="p-6 text-center text-gray-500">Нет данных для GAT-1 в этой четверти.</p>
+                 <p class="p-6 text-center text-gray-500">Нет данных для Дня 1 этого теста.</p>
             {% endif %}
         </div>
-
-        <div x-show="activeTab === 'gat2'">
-            {% if test_gat2 and students_data_gat2 %}
-                {% include 'results/includes/detailed_table.html' with students_data=students_data_gat2 table_header=table_header_gat2 %}
+        <div x-show="activeTab === 'day2'">
+            {% if test_day2 and students_data_day2 %}
+                {% include 'results/includes/detailed_table.html' with students_data=students_data_day2 table_header=table_header_day2 %}
             {% else %}
-                <p class="p-6 text-center text-gray-500">Нет данных для GAT-2 в этой четверти.</p>
+                <p class="p-6 text-center text-gray-500">Нет данных для Дня 2 этого теста.</p>
             {% endif %}
         </div>
     </div>
@@ -100,13 +89,10 @@
              box-shadow: none !important;
              border: none !important;
         }
-        /* Показываем активную вкладку при печати, если она не 'total' */
         [x-data] > div:not(:first-child) > div {
             display: none !important;
         }
-        [x-data] > div:not(:first-child) > div[x-show="activeTab === 'total'"],
-        [x-data] > div:not(:first-child) > div[x-show="activeTab === 'gat1'"],
-        [x-data] > div:not(:first-child) > div[x-show="activeTab === 'gat2'"] {
+        [x-data] > div:not(:first-child) > div[x-show^="activeTab"] {
             display: block !important;
         }
     }

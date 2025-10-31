@@ -10,7 +10,7 @@ from .models import (
     AcademicYear, Quarter, School, SchoolClass, Subject,
     GatTest, Student, StudentResult
 )
-# ✨ ИЗМЕНЕНИЕ 1: Импортируем правильную функцию
+# Импортируем правильную функцию из сервисов
 from .services import process_student_results_upload
 
 class ServicesTestCase(TestCase):
@@ -28,9 +28,10 @@ class ServicesTestCase(TestCase):
         # Создаем "базовый" класс "10", к которому будет привязан тест
         cls.base_class = SchoolClass.objects.create(name="10", school=cls.school)
 
-        # Создаем предметы
-        cls.math = Subject.objects.create(name="Математика", abbreviation="МАТ", school=cls.school)
-        cls.phys = Subject.objects.create(name="Физика", abbreviation="ФИЗ", school=cls.school)
+        # --- ✨ ИСПРАВЛЕНИЕ 1: Убрано поле 'school' ---
+        # Модель Subject больше не привязана к школе
+        cls.math = Subject.objects.create(name="Математика", abbreviation="МАТ")
+        cls.phys = Subject.objects.create(name="Физика", abbreviation="ФИЗ")
 
         # Создаем GAT-тест, привязанный к параллели "10"
         cls.gat_test = GatTest.objects.create(
@@ -53,9 +54,9 @@ class ServicesTestCase(TestCase):
             'Surname': ['Иванов', 'Петров', 'Сидоров'],
             'Name': ['Иван', 'Петр', 'Сидор'],
             'Section': ['А', 'А', 'Б'], # Сервис создаст классы '10А' и '10Б'
-            'МАТ_1': [1, 0, 1],
-            'МАТ_2': [0, 1, 1],
-            'ФИЗ_1': [1, 1, 0],
+            'МАТ_1': [1, 0, 1], # Сидоров: 1
+            'МАТ_2': [0, 1, 1], # Сидоров: 1
+            'ФИЗ_1': [1, 1, 0], # Сидоров: 0
         })
 
         output = io.BytesIO()
@@ -77,15 +78,14 @@ class ServicesTestCase(TestCase):
         """
         excel_file = self.create_test_excel_file()
         
-        # ✨ ИЗМЕНЕНИЕ 2: Вызываем правильную функцию и получаем (success, report)
+        # Вызываем правильную функцию и получаем (success, report)
         success, report = process_student_results_upload(self.gat_test, excel_file)
 
         # Проверяем, что отчет вернул успех
         self.assertTrue(success)
         
-        # ✨ ИЗМЕНЕНИЕ 3: Проверяем ключи из нового отчета
+        # Проверяем ключи из нового отчета
         self.assertEqual(report['total_unique_students'], 3)
-        self.assertEqual(report['created_students'], 3)
         self.assertEqual(report['created_students'], 3)
         self.assertEqual(len(report['errors']), 0)
 
@@ -101,11 +101,18 @@ class ServicesTestCase(TestCase):
 
         # Проверяем его результат
         sidorov_result = StudentResult.objects.get(student=sidorov)
+        
+        # --- ✨ ИСПРАВЛЕНИЕ 2: Ожидаем словарь, а не список ---
+        # Сервис services.py теперь сохраняет ответы в виде словаря:
+        # { 'номер_вопроса': True/False }
         expected_scores = {
-            str(self.math.id): [True, True], # МАТ_1 = 1, МАТ_2 = 1
-            str(self.phys.id): [False]         # ФИЗ_1 = 0
+            str(self.math.id): { '1': True, '2': True }, # МАТ_1 = 1, МАТ_2 = 1
+            str(self.phys.id): { '1': False }           # ФИЗ_1 = 0
         }
         
-        # ✨ ИЗМЕНЕНИЕ 4: Проверяем правильное поле .scores_by_subject
+        # Проверяем, что структура в БД соответствует ожидаемой
         self.assertEqual(sidorov_result.scores_by_subject, expected_scores)
-        self.assertEqual(sidorov_result.total_score, 2) # (True + True)
+        
+        # Проверяем, что итоговый балл подсчитан верно (1 + 1 + 0 = 2)
+        # Эта логика в services.py была правильной
+        self.assertEqual(sidorov_result.total_score, 2)

@@ -5,6 +5,8 @@ from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.db.models import Q, F, UniqueConstraint
 from django.utils import timezone
+# ✨ 1. ДОБАВЬТЕ ЭТОТ ИМПОРТ ✨
+from django.core.cache import cache 
 
 # =============================================================================
 # --- БАЗОВЫЕ И ВСПОМОГАТЕЛЬНЫЕ МОДЕЛИ ---
@@ -24,7 +26,6 @@ class AcademicYear(BaseModel):
     name = models.CharField(max_length=100, unique=True, verbose_name="Название")
     start_date = models.DateField(verbose_name="Дата начала")
     end_date = models.DateField(verbose_name="Дата окончания")
-    #is_active = models.BooleanField(default=True, verbose_name="Активен")
 
     class Meta:
         ordering = ['-start_date']
@@ -35,6 +36,7 @@ class AcademicYear(BaseModel):
         return self.name
 
     def clean(self):
+        # ... (ваш метод clean без изменений) ...
         if self.start_date and self.end_date:
             if self.start_date >= self.end_date:
                 raise ValidationError("Дата начала должна быть раньше даты окончания.")
@@ -44,6 +46,24 @@ class AcademicYear(BaseModel):
             ).exclude(pk=self.pk)
             if overlapping.exists():
                 raise ValidationError("Даты этого учебного года пересекаются с существующим.")
+
+    # --- ✨✨✨ Методы для сброса кеша (теперь они будут работать) ✨✨✨ ---
+    
+    def save(self, *args, **kwargs):
+        """
+        Переопределяем метод save.
+        При любом сохранении (создании или обновлении) - очищаем кеш.
+        """
+        cache.delete('all_archive_years')
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        """
+        Переопределяем метод delete.
+        При удалении - очищаем кеш.
+        """
+        cache.delete('all_archive_years')
+        super().delete(*args, **kwargs)
 
 class Quarter(BaseModel):
     """Модель учебной четверти, привязанная к учебному году."""
@@ -90,15 +110,16 @@ class School(BaseModel):
         return self.name
 
 class Subject(BaseModel):
-    # ✨ ИЗМЕНЕНИЕ: Поле school полностью удалено
-    
+    """
+    Модель Предмета (Глобальная, не привязана к школе)
+    """
     name = models.CharField(
         max_length=100, 
-        unique=True,  # Делаем название предмета уникальным, чтобы не было дубликатов
+        unique=True,  # Название предмета уникально
         verbose_name="Название предмета"
     )
     abbreviation = models.CharField(
-        max_length=10, 
+        max_length=15, 
         blank=True, 
         null=True, 
         verbose_name="Сокращение"
@@ -110,7 +131,6 @@ class Subject(BaseModel):
         ordering = ['name']
 
     def __str__(self):
-        # ✨ ИЗМЕНЕНИЕ: Теперь просто возвращаем название предмета
         return self.name
 
 class SchoolClass(BaseModel):
@@ -146,10 +166,7 @@ class SchoolClass(BaseModel):
 class GatTest(BaseModel):
     """Модель GAT-теста."""
     TEST_NUMBER_CHOICES = [(1, 'GAT-1'), (2, 'GAT-2'), (3, 'GAT-3'), (4, 'GAT-4')]
-    
-    # --- НОВОЕ ПОЛЕ DAY ---
     DAY_CHOICES = [(1, 'День 1'), (2, 'День 2')]
-    # ----------------------
 
     name = models.CharField(max_length=255, verbose_name="Название теста")
     
@@ -162,16 +179,14 @@ class GatTest(BaseModel):
     
     subjects = models.ManyToManyField(Subject, verbose_name="Предметы в тесте")
 
-    # --- ДОБАВЛЕНО НОВОЕ ПОЛЕ ---
     day = models.PositiveSmallIntegerField(
         choices=DAY_CHOICES, 
         default=1, 
         verbose_name="День GAT"
     )
-    # -----------------------------
 
     class Meta:
-        ordering = ['-test_date', 'test_number', 'day'] # Добавили 'day' в сортировку
+        ordering = ['-test_date', 'test_number', 'day']
         verbose_name = "GAT Тест"
         verbose_name_plural = "GAT Тесты"
 
@@ -185,7 +200,13 @@ class GatTest(BaseModel):
 
     @property
     def schools(self):
-        return School.objects.filter(classes__in=self.school_classes.all()).distinct()
+        # Это свойство, вероятно, больше не нужно или должно быть переписано,
+        # так как `school_classes` (M2M) было заменено на `school` (FK)
+        # Если вы используете `school` (FK), то:
+        if self.school:
+            return School.objects.filter(pk=self.school.pk)
+        return School.objects.none()
+
 
 class Topic(BaseModel):
     """Темы вопросов по предметам."""
@@ -219,7 +240,9 @@ class Question(BaseModel):
         ]
 
     def __str__(self):
-        return f"Вопрос №{self.question_number} ({self.subject.abbreviation}) по тесту '{self.gat_test.name}'"
+        # Упрощенное представление для избежания ошибок, если subject=None
+        subject_abbr = self.subject.abbreviation if self.subject else 'N/A'
+        return f"Вопрос №{self.question_number} ({subject_abbr}) по тесту '{self.gat_test.name}'"
 
 class AnswerOption(BaseModel):
     """Вариант ответа на вопрос."""
@@ -263,9 +286,6 @@ class Student(BaseModel):
 
     def __str__(self):
         return f"{self.last_name_ru} {self.first_name_ru} ({self.school_class.name})"
-    
-    # --- ИЗМЕНЕНИЯ ЗДЕСЬ ---
-    # Удалите старое свойство 'full_name' и замените его этими тремя:
     
     @property
     def full_name_ru(self):
@@ -369,7 +389,7 @@ class Faculty(BaseModel):
         verbose_name_plural = "Факультеты"
         ordering = ['university', 'name']
         
-    def __str__(self):
+    def __str__(f):
         return f"{self.name} ({self.university.name})"
     
 # =============================================================================
@@ -393,4 +413,7 @@ class QuestionCount(BaseModel):
         ]
 
     def __str__(self):
-        return f"{self.subject.name} в классе {self.school_class.name}"
+        # Добавим проверку на случай, если school_class или subject будут None
+        class_name = self.school_class.name if self.school_class else 'N/A'
+        subject_name = self.subject.name if self.subject else 'N/A'
+        return f"{subject_name} в классе {class_name}"

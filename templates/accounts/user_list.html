@@ -6,9 +6,9 @@
     <h1 class="page-title">{{ title }}</h1>
     <div class="flex items-center gap-2">
         <a href="{% url 'core:manage_permissions' %}" class="modern-btn secondary">Настроить доступы</a>
-        {% if perms.auth.add_user %}
-            <a href="{% url 'core:user_add' %}" class="modern-btn primary">+ Добавить</a>
-        {% endif %}
+        {% if request.user.is_superuser or request.user.profile.is_director %} {# <--- ИЗМЕНЕНИЕ ЗДЕСЬ #}
+    <a href="{% url 'core:user_add' %}" class="modern-btn primary">+ Добавить</a>
+{% endif %}
     </div>
 </div>
 
