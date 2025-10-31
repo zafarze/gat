@@ -1,7 +1,6 @@
 # D:\New_GAT\core\views\utils_reports.py (ПОЛНАЯ ИСПРАВЛЕННАЯ ВЕРСИЯ)
 
 from collections import defaultdict
-# ✨ 1. Добавляем SimpleNamespace для создания "фейковых" объектов
 from types import SimpleNamespace 
 from accounts.models import UserProfile
 from core.forms import MonitoringFilterForm
@@ -42,16 +41,14 @@ def get_report_context(get_params, request_user, mode='monitoring'):
     subjects_filter_from_form = Subject.objects.none()
     valid_form_filters = Q()
     
-    # ✨ 2. Определяем, нужно ли группировать дни
     days_selected = []
     should_group_days = False
 
     if form.is_valid():
         subjects_filter_from_form = form.cleaned_data.get('subjects')
-        days_selected = form.cleaned_data.get('days', []) # Получаем список дней
+        days_selected = form.cleaned_data.get('days', []) 
 
-        # --- ✨✨✨ ИСПРАВЛЕНИЕ 1: Группируем для ВСЕХ режимов ✨✨✨ ---
-        # Группируем, если выбраны 0 или 2 дня
+        # --- Группируем для ВСЕХ режимов, если выбрано 0 или 2 дня ---
         if len(days_selected) != 1:
             should_group_days = True
         # ---
@@ -72,14 +69,12 @@ def get_report_context(get_params, request_user, mode='monitoring'):
             valid_form_filters &= Q(gat_test__test_number__in=test_numbers)
             title_details['test_type'] = ", ".join([f"GAT-{num}" for num in test_numbers])
         
-        # Фильтр по дням применяется, ТОЛЬКО если мы не группируем
         if days_selected and not should_group_days:
-            # Используем `days_selected` (который является списком), а не `days`
             valid_form_filters &= Q(gat_test__day__in=days_selected)
 
     results_qs = base_results_qs.filter(valid_form_filters)
 
-    # --- Определение `has_both_days` (Этот блок у вас уже был исправлен и он верный) ---
+    # --- Определение `has_both_days` ---
     student_test_days = defaultdict(set)
     day_data = results_qs.values(
         'student_id',
@@ -93,7 +88,7 @@ def get_report_context(get_params, request_user, mode='monitoring'):
     }
     # ---
 
-    # --- Фильтрация по ПРЕДМЕТАМ (без изменений) ---
+    # --- Фильтрация по ПРЕДМЕТАМ ---
     final_subject_ids_to_filter = set()
     apply_subject_filter_qs = False
     if is_expert or is_teacher_or_homeroom:
@@ -115,7 +110,7 @@ def get_report_context(get_params, request_user, mode='monitoring'):
             results_qs = results_qs.none()
     # ---
 
-    # --- Определение `header_subjects` (без изменений) ---
+    # --- Определение `header_subjects` ---
     subject_map_all = {s.id: s for s in Subject.objects.all()}
     header_subjects = []
     if results_qs.exists():
@@ -135,7 +130,7 @@ def get_report_context(get_params, request_user, mode='monitoring'):
         )
     # ---
 
-    # --- Расчет `q_counts` (без изменений) ---
+    # --- Расчет `q_counts` ---
     q_counts = {}
     ref_classes_qs = SchoolClass.objects.none()
     if results_qs.exists() and header_subjects:
@@ -163,7 +158,7 @@ def get_report_context(get_params, request_user, mode='monitoring'):
                     q_counts[(subj.id, cls.id)] = q_counts_map[subj.id][cls.parent_id]
     # ---
 
-    # --- Формирование заголовков (`table_headers`) (без изменений) ---
+    # --- Формирование заголовков (`table_headers`) ---
     for subj in header_subjects:
         representative_q_count = 0
         if ref_classes_qs.exists():
@@ -172,37 +167,32 @@ def get_report_context(get_params, request_user, mode='monitoring'):
         table_headers.append({'subject': subj, 'q_count': representative_q_count})
 
 
-    # --- ✨ 3. Формирование строк таблицы (`table_rows`) С РАЗДЕЛЬНОЙ ЛОГИКОЙ ---
+    # --- Формирование строк таблицы (`table_rows`) ---
     if results_qs.exists():
         
         # --- ЛОГИКА A: Группируем дни (0 или 2 дня выбрано) ---
         if should_group_days:
             grouped_rows = defaultdict(lambda: {
-                # 'scores_by_subject' хранит суммарные баллы и макс. балл
                 'scores_by_subject': defaultdict(lambda: {'score': 0, 'total': 0}),
-                'total_score': 0, # Сумма баллов (для monitoring)
+                'total_score': 0, 
             })
-            student_map = {} # Кэш для объектов Student
+            student_map = {} 
 
             for result in results_qs.distinct().select_related('student__school_class', 'gat_test'):
                 if not (result.student and result.student.school_class and isinstance(result.scores_by_subject, dict)):
                     continue
                 
-                # Ключ группировки: (Студент, Номер GAT)
                 key = (result.student_id, result.gat_test.test_number)
                 
-                # Сохраняем студента в кэш
                 if result.student_id not in student_map:
                     student_map[key] = result.student
 
-                # Суммируем баллы по предметам в заголовке
                 for header in table_headers:
                     header_subject = header['subject']
                     subject_id, subject_id_str = header_subject.id, str(header_subject.id)
                     answers = result.scores_by_subject.get(subject_id_str)
                     q_count = q_counts.get((subject_id, result.student.school_class_id), 0)
 
-                    # Сохраняем для отображения в ячейках
                     current_score_data = grouped_rows[key]['scores_by_subject'][subject_id]
                     
                     if answers is not None and isinstance(answers, dict):
@@ -210,12 +200,9 @@ def get_report_context(get_params, request_user, mode='monitoring'):
                         grouped_rows[key]['total_score'] += score
                         
                         current_score_data['score'] += score
-                        current_score_data['total'] = q_count # q_count одинаковый для параллели
+                        current_score_data['total'] = q_count 
                     
                     elif subject_id not in grouped_rows[key]['scores_by_subject']:
-                        # НЕ устанавливаем 'score': '—'. 
-                        # defaultdict уже установил 'score': 0.
-                        # Нам нужно только установить 'total' (q_count).
                         current_score_data['total'] = q_count
 
             # Конвертируем сгруппированные данные в `table_rows`
@@ -223,18 +210,14 @@ def get_report_context(get_params, request_user, mode='monitoring'):
                 student_obj = student_map.get((student_id, test_number))
                 if not student_obj: continue
                 
-                # Создаем "фейковый" объект result_obj, чтобы шаблон `monitoring.html` работал
                 fake_test_name = f"GAT-{test_number} (Total)"
-                
-                # Добавляем .test_number и .day для функции сортировки (sort_key_lambda)
                 fake_test = SimpleNamespace(
                     name=fake_test_name,
-                    test_number=test_number, # <-- ДОБАВЛЕНО
-                    day=0                    # <-- ДОБАВЛЕНО (безопасное значение для сортировки)
+                    test_number=test_number,
+                    day=0
                 )
                 fake_result_obj = SimpleNamespace(gat_test=fake_test)
 
-                # --- ✨✨✨ ИСПРАВЛЕНИЕ 2: Считаем оценки для сгруппированных данных ✨✨✨ ---
                 final_grades_by_subject = {}
                 total_grade_points = 0
                 subjects_in_row = 0
@@ -242,7 +225,7 @@ def get_report_context(get_params, request_user, mode='monitoring'):
                 if mode == 'grading':
                     for subject_id, score_data in data['scores_by_subject'].items():
                         score = score_data['score']
-                        total = score_data['total'] # total - это q_count
+                        total = score_data['total'] 
                         
                         if total > 0:
                             percentage = (score / total) * 100
@@ -253,19 +236,17 @@ def get_report_context(get_params, request_user, mode='monitoring'):
                         else:
                             final_grades_by_subject[subject_id] = "—"
                 
-                # Определяем, какой total_score использовать
                 if mode == 'grading':
                     final_total_score = total_grade_points if subjects_in_row > 0 else 0
-                else: # mode == 'monitoring'
+                else: 
                     final_total_score = data['total_score']
-                # --- ✨✨✨ КОНЕЦ ИСПРАВЛЕНИЯ 2 ✨✨✨ ---
 
                 table_rows.append({
                     'student': student_obj,
-                    'result_obj': fake_result_obj, # Передаем фейковый объект
-                    'scores_by_subject': data['scores_by_subject'],  # Для monitoring
-                    'grades_by_subject': final_grades_by_subject, # <-- Теперь заполняется для grading
-                    'total_score': final_total_score, # <-- Используется правильный total
+                    'result_obj': fake_result_obj, 
+                    'scores_by_subject': data['scores_by_subject'],
+                    'grades_by_subject': final_grades_by_subject,
+                    'total_score': final_total_score,
                     'has_both_days': (student_id, test_number) in students_with_both_days
                 })
 
@@ -275,13 +256,12 @@ def get_report_context(get_params, request_user, mode='monitoring'):
                 if not (result.student and result.student.school_class and isinstance(result.scores_by_subject, dict)):
                     continue
 
-                # Используем вашу уже исправленную логику `has_both_days`
                 current_key = (result.student_id, result.gat_test.test_number)
                 has_both_days = current_key in students_with_both_days
 
                 row_data = {
                     'student': result.student,
-                    'result_obj': result, # Передаем настоящий объект
+                    'result_obj': result, 
                     'scores_by_subject': {},
                     'grades_by_subject': {},
                     'total_score': 0,
@@ -318,17 +298,16 @@ def get_report_context(get_params, request_user, mode='monitoring'):
 
                 table_rows.append(row_data)
 
-    # --- Сортировка (`table_rows`) (без изменений) ---
+    # --- ✨✨✨ ИСПРАВЛЕНИЕ 3: Сортировка по результату (сначала лучшие) ✨✨✨ ---
     sort_key_lambda = (
         lambda x: (
-            x['student'].last_name_ru,
-            x['student'].first_name_ru,
-            # ✨ 4. Адаптируем ключ сортировки
-            x['result_obj'].gat_test.test_number if hasattr(x['result_obj'], 'gat_test') else 0,
-            x['result_obj'].gat_test.day if hasattr(x['result_obj'], 'gat_test') and hasattr(x['result_obj'].gat_test, 'day') else 0
+            -x.get('total_score', 0),    # 1. По общему баллу (по убыванию)
+            x['student'].last_name_ru,   # 2. По фамилии (по возрастанию)
+            x['student'].first_name_ru   # 3. По имени (по возрастанию)
         )
     )
     table_rows.sort(key=sort_key_lambda)
+    # --- ✨✨✨ КОНЕЦ ИСПРАВЛЕНИЯ 3 ✨✨✨ ---
 
     # --- Возвращаем контекст ---
     return {
