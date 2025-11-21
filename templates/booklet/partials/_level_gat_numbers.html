@@ -1,0 +1,38 @@
+{# templates/booklet/partials/_level_gat_numbers.html #}
+
+{# Навигация #}
+<div class="mb-6 flex items-center text-sm text-gray-500">
+    <button hx-get="{% url 'core:booklet_catalog' %}" hx-target="#catalog-content" class="hover:text-indigo-600">Школы</button>
+    <span class="mx-2">/</span>
+    <button hx-get="{% url 'core:booklet_catalog' %}?school_id={{ school.id }}" hx-target="#catalog-content" class="hover:text-indigo-600">{{ school.name }}</button>
+    <span class="mx-2">/</span>
+    <span class="font-bold text-gray-800">{{ current_class.name }} класс</span>
+</div>
+
+<h2 class="text-2xl font-bold text-gray-800 mb-6">Выберите этап тестирования</h2>
+
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 animate-fade-in">
+    {% for item in available_gats %}
+    <div class="bg-white p-6 rounded-xl shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all border border-gray-100 cursor-pointer group relative overflow-hidden"
+         hx-get="{% url 'core:booklet_catalog' %}?school_id={{ school.id }}&class_id={{ current_class.id }}&gat_number={{ item.test_number }}"
+         hx-target="#catalog-content"
+         hx-push-url="true">
+        
+        {# Декоративный фон #}
+        <div class="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-indigo-50 rounded-full opacity-50 group-hover:scale-150 transition-transform duration-500"></div>
+
+        <div class="relative z-10 flex flex-col items-center text-center">
+            <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white flex items-center justify-center text-2xl font-bold mb-4 shadow-lg shadow-indigo-200">
+                {{ item.test_number }}
+            </div>
+            
+            <h3 class="text-xl font-bold text-gray-800 group-hover:text-indigo-600 transition-colors">GAT-{{ item.test_number }}</h3>
+            <p class="text-sm text-gray-500 mt-1">{{ item.count }} буклета</p>
+        </div>
+    </div>
+    {% empty %}
+    <div class="col-span-full text-center py-12 bg-gray-50 rounded-xl border border-dashed border-gray-300">
+        <p class="text-gray-500">В этом классе еще нет созданных тестов.</p>
+    </div>
+    {% endfor %}
+</div>

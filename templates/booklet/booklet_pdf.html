@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    {% load static %}
+    
+    <style>
+        @page {
+            size: A4;
+            margin: 10mm 15mm;
+            @bottom-center {
+                content: counter(page);
+                font-family: 'Times New Roman', serif;
+                font-size: 12px;
+                border-top: 1px solid black;
+                width: 100%;
+                padding-top: 5px;
+            }
+            @bottom-left { content: ""; } @bottom-right { content: ""; }
+            @top-left { content: ""; } @top-right { content: ""; } @top-center { content: ""; }
+        }
+
+        body {
+            font-family: 'Times New Roman', serif;
+            font-size: 13px; /* Чуть уменьшил шрифт для компактности */
+            line-height: 1.2;
+            margin: 0; padding: 0;
+        }
+        
+        .columns-container {
+            column-count: 2;
+            column-gap: 8mm; /* Чуть уменьшил зазор */
+            column-rule: 1px solid black;
+        }
+
+        .header-grid {
+            display: table; width: 100%;
+            border-bottom: 4px double #999;
+            margin-bottom: 15px; padding-bottom: 10px;
+        }
+        .header-cell { display: table-cell; width: 33%; vertical-align: bottom; }
+        .header-center { text-align: center; text-transform: uppercase; font-weight: bold;}
+        .header-right { text-align: right; }
+
+        .subject-title {
+            text-align: center; text-transform: uppercase; font-weight: bold;
+            margin: 10px 0 5px 0;
+            break-after: avoid; 
+            column-span: all;
+            font-size: 14px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .question-item {
+            margin-bottom: 12px;
+            break-inside: avoid; /* Важно: вопрос не разрывается */
+        }
+
+        /* Картинка вопроса (большая) */
+        .question-image {
+            display: block;
+            max-width: 95%;
+            max-height: 120px;
+            margin: 5px auto;
+            object-fit: contain;
+        }
+
+        /* Картинка варианта ответа (маленькая) */
+        .option-image {
+            display: block;
+            max-height: 50px; /* Ограничиваем высоту, чтобы не раздувать список */
+            max-width: 100%;
+            margin-top: 3px;
+            margin-left: 0;
+        }
+
+        ul { list-style: none; padding: 0; margin: 0; }
+        li { 
+            margin-bottom: 3px; 
+            position: relative; 
+            padding-left: 5px;
+        }
+        
+        /* Если 4 варианта - сетка 2x2 */
+        .options-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2px 10px; /* row-gap column-gap */
+        }
+        
+        .opt-content {
+            display: inline-block;
+            vertical-align: top;
+        }
+
+        .opt-letter { font-weight: bold; margin-right: 3px; float: left; }
+    </style>
+</head>
+<body>
+
+    <div class="header-grid">
+        <div class="header-cell">СИНФИ {{ test.school_class.name }}</div>
+        <div class="header-cell header-center">ТЕСТИ УМУМӢ {{ test.test_number }}</div>
+        <div class="header-cell header-right">{{ header_right }}</div>
+    </div>
+
+    <div class="columns-container">
+        {% for question in all_questions %}
+            
+            {% ifchanged question.subject.id %}
+                {% if not forloop.first %}<div style="height: 10px;"></div>{% endif %}
+                <h3 class="subject-title">{{ question.subject.name }}</h3>
+            {% endifchanged %}
+
+            <div class="question-item">
+                {# Текст вопроса #}
+                <div style="font-weight: bold; margin-bottom: 3px;">
+                    {{ forloop.counter }}. {{ question.text|linebreaksbr }}
+                </div>
+
+                {# Картинка вопроса #}
+                {% if question.question_image %}
+                    <img class="question-image" src="{{ question.question_image.path }}">
+                {% endif %}
+
+                {# Список вариантов #}
+                <ul class="{% if question.fixed_options|length == 4 %}options-grid{% endif %}">
+                    {% for option in question.fixed_options %}
+                    <li>
+                        <span class="opt-letter">
+                            {% if forloop.counter == 1 %}A){% elif forloop.counter == 2 %}B){% elif forloop.counter == 3 %}C){% elif forloop.counter == 4 %}D){% else %}E){% endif %}
+                        </span>
+                        
+                        <div class="opt-content">
+                            {{ option.text }}
+                            
+                            {# --- 🔥 ДОБАВЛЕНО: КАРТИНКА ВАРИАНТА --- #}
+                            {% if option.option_image %}
+                                {# Используем .path для WeasyPrint (локальный путь), .url для веба #}
+                                <img class="option-image" src="{{ option.option_image.path }}">
+                            {% endif %}
+                            {# --- КОНЕЦ ДОБАВЛЕНИЯ --- #}
+                        </div>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+
+        {% endfor %}
+    </div>
+
+</body>
+</html>

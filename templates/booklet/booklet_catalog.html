@@ -1,0 +1,41 @@
+{# templates/booklet/booklet_catalog.html #}
+{% extends 'base.html' %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    
+    {# --- Заголовок страницы --- #}
+    <div class="flex flex-col md:flex-row justify-between items-center mb-8">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-800">Библиотека тестов</h1>
+            <p class="text-gray-500 mt-1">Архив и управление буклетами GAT</p>
+        </div>
+    </div>
+
+    {# --- ДИНАМИЧЕСКИЙ КОНТЕЙНЕР --- #}
+    {# Важно: id="catalog-content" используется в partials для HTMX-запросов #}
+    <div id="catalog-content" class="min-h-[400px]">
+        
+        {# Уровень 4: Список конкретных буклетов (финальный) #}
+        {% if level == 'booklets' %}
+            {% include 'booklet/partials/_level_booklets.html' %}
+        
+        {# Уровень 3: Выбор номера GAT (GAT-1, GAT-2...) #}
+        {% elif level == 'gat_numbers' %}
+            {% include 'booklet/partials/_level_gat_numbers.html' %}
+        
+        {# Уровень 2: Список классов #}
+        {% elif level == 'classes' %}
+            {% include 'booklet/partials/_level_classes.html' %}
+        
+        {# Уровень 1: Список школ (стартовый) #}
+        {% else %}
+            {% include 'booklet/partials/_level_schools.html' %}
+        {% endif %}
+        
+    </div>
+
+</div>
+{% endblock %}

@@ -1,0 +1,145 @@
+{# D:\GAT\templates\gat_tests\partials\_form_content.html (ПОЛНЫЙ ИСПРАВЛЕННЫЙ КОД) #}
+{% load widget_tweaks %}
+
+{# Этот div является целью для HTMX при ошибках валидации #}
+<div id="modal-form-content" class="h-full">
+    <form
+        {# Используем request.path для URL, т.к. view загружает форму по правильному URL #}
+        hx-post="{{ request.path }}"
+        {# При ошибке обновляем только этот div #}
+        hx-target="#modal-form-content"
+        hx-swap="outerHTML"
+        {# При успехе - view отправит HX-Refresh: true #}
+        hx-trigger="submit"
+        method="post"
+        class="flex flex-col h-full bg-white rounded-xl" {# Твои стили #}
+        {# Добавляем HTMX для инициализации зависимых полей при редактировании #}
+        {% if object %}
+            hx-get="{% url 'core:load_class_and_subjects_for_gat' %}?school={{ object.school.id }}"
+            hx-target="#dependent-fields-container"
+            hx-swap="innerHTML"
+            hx-trigger="load delay:100ms" {# Небольшая задержка для Alpine #}
+        {% endif %}
+    >
+        {% csrf_token %}
+
+        {# ЗАГОЛОВОК (фиксированный) #}
+        <div class="p-6 border-b flex justify-between items-center sticky top-0 bg-white z-10">
+            <h2 class="text-2xl font-bold text-gray-800">{{ title }}</h2>
+            <button type="button" @click="showModal = false" class="text-gray-400 hover:text-gray-600">
+                <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+            </button>
+        </div>
+
+        {# ОСНОВНОЙ КОНТЕНТ (прокручиваемый) #}
+        <div class="p-8 overflow-y-auto flex-1 space-y-6">
+
+            {% if form.non_field_errors %}
+                <div class="p-3 bg-red-100 text-red-700 rounded-lg">
+                    {% for error in form.non_field_errors %}<p>{{ error }}</p>{% endfor %}
+                </div>
+            {% endif %}
+
+            {# --- Новые поля формы GatTestForm --- #}
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+
+                {# --- Левая Колонка --- #}
+                <div class="space-y-4">
+                    <div>
+                        <label for="{{ form.name.id_for_label }}" class="modern-label">{{ form.name.label }}</label>
+                        {% render_field form.name class+="form-input" %}
+                        {% for error in form.name.errors %}<p class="form-error mt-1">{{ error }}</p>{% endfor %}
+                    </div>
+                    <div>
+                        <label for="{{ form.test_number.id_for_label }}" class="modern-label">{{ form.test_number.label }}</label>
+                        {% render_field form.test_number class+="form-select" %}
+                        {% for error in form.test_number.errors %}<p class="form-error mt-1">{{ error }}</p>{% endfor %}
+                    </div>
+                     <div>
+                        <label for="{{ form.day.id_for_label }}" class="modern-label">{{ form.day.label }}</label>
+                        {% render_field form.day class+="form-select" %}
+                        {% for error in form.day.errors %}<p class="form-error mt-1">{{ error }}</p>{% endfor %}
+                    </div>
+                </div>
+
+                {# --- Правая Колонка --- #}
+                <div class="space-y-4">
+                     <div>
+                        <label for="{{ form.quarter.id_for_label }}" class="modern-label">{{ form.quarter.label }}</label>
+                        {% render_field form.quarter class+="form-select" %}
+                        {% for error in form.quarter.errors %}<p class="form-error mt-1">{{ error }}</p>{% endfor %}
+                    </div>
+                    <div>
+                        <label for="{{ form.test_date.id_for_label }}" class="modern-label">{{ form.test_date.label }}</label>
+                        {% render_field form.test_date type="date" class+="form-input" %} {# Убедись, что тип date #}
+                        {% for error in form.test_date.errors %}<p class="form-error mt-1">{{ error }}</p>{% endfor %}
+                    </div>
+                     <div>
+                        <label for="{{ form.school.id_for_label }}" class="modern-label">{{ form.school.label }}</label>
+                        {# --- 👇 ИСПРАВЛЕНИЕ: Ручное рендеринг поля form.school 👇 --- #}
+                        <select
+                            name="{{ form.school.name }}"
+                            id="{{ form.school.id_for_label }}"
+                            class="form-select {{ form.school.field.widget.attrs.class }}" {# Добавляем базовые классы формы #}
+                            hx-get="{% url 'core:load_class_and_subjects_for_gat' %}" {# URL теперь обрабатывается Django #}
+                            hx-target="#dependent-fields-container"
+                            hx-swap="innerHTML"
+                            hx-include="[name='school']"
+                            hx-trigger="change"
+                            hx-indicator="#modal-loading-indicator"
+                            {% if form.school.field.required %}required{% endif %}
+                        >
+                            {# Рендерим опции (пустая + остальные) #}
+                            {% if form.school.field.empty_label %}
+                                <option value="">{{ form.school.field.empty_label }}</option>
+                            {% endif %}
+                            {% for value, text in form.school.field.choices %}
+                                <option value="{{ value }}" {% if form.school.value|stringformat:"s" == value|stringformat:"s" %}selected{% endif %}>{{ text }}</option>
+                            {% endfor %}
+                        </select>
+                        {# --- КОНЕЦ ИСПРАВЛЕНИЯ --- #}
+                        {% for error in form.school.errors %}<p class="form-error mt-1">{{ error }}</p>{% endfor %}
+                    </div>
+                </div>
+
+                {# --- Зависимые поля (Класс) --- #}
+                 <div id="dependent-fields-container" class="md:col-span-2 space-y-4">
+                     {# Включаем шаблон только для поля КЛАСС #}
+                     {% include 'gat_tests/partials/_class_field.html' with form=form %}
+                 </div>
+
+                 {# --- Чекбоксы Перемешивания --- #}
+                 <div class="md:col-span-2 border-t pt-4 space-y-3">
+                     <div class="relative flex items-start">
+                        <div class="flex items-center h-5">
+                            {% render_field form.shuffle_questions class+="form-checkbox" %}
+                        </div>
+                        <div class="ml-3 text-sm">
+                            <label for="{{ form.shuffle_questions.id_for_label }}" class="font-medium text-gray-700">{{ form.shuffle_questions.label }}</label>
+                            {% if form.shuffle_questions.help_text %}<p class="text-xs text-gray-500">{{ form.shuffle_questions.help_text }}</p>{% endif %}
+                        </div>
+                     </div>
+                     <div class="relative flex items-start">
+                        <div class="flex items-center h-5">
+                            {% render_field form.shuffle_options class+="form-checkbox" %}
+                        </div>
+                        <div class="ml-3 text-sm">
+                            <label for="{{ form.shuffle_options.id_for_label }}" class="font-medium text-gray-700">{{ form.shuffle_options.label }}</label>
+                            {% if form.shuffle_options.help_text %}<p class="text-xs text-gray-500">{{ form.shuffle_options.help_text }}</p>{% endif %}
+                         </div>
+                     </div>
+                 </div>
+
+            </div>
+
+            {# Индикатор загрузки для зависимых полей #}
+            <div id="modal-loading-indicator" class="htmx-indicator text-center text-gray-500 py-4">Загрузка классов...</div>
+        </div>
+
+        {# ФУТЕР С КНОПКАМИ (фиксированный) #}
+        <div class="p-6 bg-gray-50 border-t flex justify-end items-center gap-4 sticky bottom-0 z-10">
+            <button type="button" @click="showModal = false" class="modern-btn secondary">Отмена</button>
+            <button type="submit" class="modern-btn primary">Сохранить</button>
+        </div>
+    </form>
+</div>

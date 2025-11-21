@@ -1,0 +1,38 @@
+<div class="bg-white rounded-lg shadow-xl overflow-hidden" @click.away="isModalOpen = false">
+    <div class="px-6 py-4 bg-gray-50 border-b border-gray-200 flex justify-between items-center">
+        <h3 class="text-lg font-medium text-gray-900">{{ title }}</h3>
+        <button @click="isModalOpen = false" class="text-gray-400 hover:text-gray-600">
+            <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+        </button>
+    </div>
+
+    <form hx-post="{% url 'core:bank_question_import' %}?topic_id={{ topic.id }}" 
+          hx-encoding="multipart/form-data"
+          class="p-6 space-y-4">
+        {% csrf_token %}
+        
+        <div class="bg-blue-50 border-l-4 border-blue-400 p-4 mb-4">
+            <div class="flex">
+                <div class="flex-shrink-0">
+                    <svg class="h-5 w-5 text-blue-400" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/></svg>
+                </div>
+                <div class="ml-3">
+                    <p class="text-sm text-blue-700">
+                        Для <strong>Excel</strong>: колонки "Вопрос", "Правильный ответ", "Неверный 1"...<br>
+                        Для <strong>Word</strong>: каждый новый абзац считается вопросом, если он не начинается с маркера ответа (+, -). Правильный ответ пометьте знаком <strong>+</strong> в начале.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        {{ form.as_p }}
+
+        <div class="flex justify-end pt-4">
+            <button type="button" @click="isModalOpen = false" class="btn btn-secondary mr-2">Отмена</button>
+            <button type="submit" class="btn btn-success flex items-center">
+                <svg class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                Загрузить
+            </button>
+        </div>
+    </form>
+</div>

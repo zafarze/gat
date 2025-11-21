@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+    {# Просто включаем содержимое из assembly_form.html #}
+    {% include "gat_tests/assembly_form.html" %}
+{% endblock %}

@@ -1,0 +1,110 @@
+{# D:\GAT\templates\question_topics\list.html (ПРАВИЛЬНАЯ ВЕРСИЯ) #}
+
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="flex justify-between items-center mb-6">
+    <h1 class="text-3xl font-bold text-gray-800">{{ title }}</h1>
+    
+    {# --- КНОПКА "ДОБАВИТЬ ТЕМУ" ОТСЮДА УДАЛЕНА --- #}
+    {# --- ОНА ТЕПЕРЬ НАХОДИТСЯ В _content_area.html --- #}
+
+</div>
+
+{# --- Навигационная цепочка (хлебные крошки) --- #}
+<nav aria-label="breadcrumb" class="mb-6 text-sm text-gray-500">
+    <ol class="list-none p-0 inline-flex space-x-2">
+        <li>
+            <a href="{% url 'core:question_topic_list' %}"
+               class="text-indigo-600 hover:underline"
+               hx-get="{% url 'core:question_topic_list' %}"
+               hx-target="#topic-content-area" {# Обновляем только контент при клике на крошки #}
+               hx-swap="innerHTML"
+               hx-push-url="true"
+               hx-indicator="#loading-indicator">
+               Предметы
+            </a>
+        </li>
+        {% if selected_subject %}
+        <li><span class="mx-2">/</span></li>
+        <li>
+             <a href="{% url 'core:question_topic_list' %}?subject_id={{ selected_subject_id }}"
+                class="text-indigo-600 hover:underline"
+                hx-get="{% url 'core:question_topic_list' %}?subject_id={{ selected_subject_id }}"
+                hx-target="#topic-content-area"
+                hx-swap="innerHTML"
+                hx-push-url="true"
+                hx-indicator="#loading-indicator">
+                {{ selected_subject.name }}
+             </a>
+        </li>
+        {% endif %}
+        {% if selected_school %}
+        <li><span class="mx-2">/</span></li>
+        <li>
+             <a href="{% url 'core:question_topic_list' %}?subject_id={{ selected_subject_id }}&school_id={{ selected_school_id }}"
+                class="text-indigo-600 hover:underline"
+                hx-get="{% url 'core:question_topic_list' %}?subject_id={{ selected_subject_id }}&school_id={{ selected_school_id }}"
+                hx-target="#topic-content-area"
+                hx-swap="innerHTML"
+                hx-push-url="true"
+                hx-indicator="#loading-indicator">
+                {{ selected_school.name }}
+             </a>
+        </li>
+        {% endif %}
+         {% if selected_class %}
+        <li><span class="mx-2">/</span></li>
+        <li class="font-medium text-gray-700">Класс {{ selected_class.name }}</li>
+        {% endif %}
+    </ol>
+</nav>
+
+{# --- Контейнер для динамического контента (карточки или таблица) --- #}
+<div id="topic-content-area">
+    {% include 'question_topics/partials/_content_area.html' %}
+</div> {# Конец #topic-content-area #}
+
+{# --- Индикатор загрузки --- #}
+{# Ваш base.html уже содержит скрипт для этого индикатора, просто оставьте HTML #}
+<div id="loading-indicator" class="htmx-indicator fixed bottom-4 right-4 bg-gray-800 text-white px-4 py-2 rounded-md shadow-lg z-50" style="display: none;">
+    <svg class="animate-spin -ml-1 mr-3 h-5 w-5 inline-block" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+    </svg>
+    Загрузка...
+</div>
+
+
+{# --- Модальные окна уже есть в base.html, поэтому здесь они не нужны --- #}
+{# {% include 'components/modal.html' %} #}
+{# {% include 'components/delete_modal.html' %} #}
+
+{% endblock %}
+
+{# --- ИСПРАВЛЕНИЕ: Добавляем пустой блок scripts --- #}
+{% block scripts %}{% endblock %}
+
+{% block styles %}
+<style>
+/* Стили для хлебных крошек */
+nav[aria-label="breadcrumb"] ol {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+}
+/* Стиль для карточек */
+.dashboard-card {
+    display: block;
+    text-decoration: none;
+    color: inherit;
+    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+.dashboard-card:hover {
+    transform: translateY(-5px);
+}
+</style>
+{% endblock %}

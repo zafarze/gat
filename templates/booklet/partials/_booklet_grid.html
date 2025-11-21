@@ -1,0 +1,91 @@
+{# templates/booklet/partials/_booklet_grid.html #}
+
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+    {% for test in tests %}
+        <div class="bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden border border-gray-100 flex flex-col h-full relative group">
+            
+            {# --- Верхняя часть (Обложка) --- #}
+            <div class="h-40 p-5 flex flex-col justify-between relative" 
+                 style="background: linear-gradient(135deg, #6366f1 0%, #9333ea 100%);">
+                
+                {# GAT Number & Day Badges #}
+                <div class="absolute top-4 left-4 flex space-x-2">
+                    <span class="bg-white/30 backdrop-blur-sm text-white px-2 py-0.5 rounded-full text-xs font-bold shadow-sm">
+                        GAT-{{ test.get_test_number_display }} {# Используем get_FOO_display для человекочитаемого текста #}
+                    </span>
+                    <span class="bg-white/30 backdrop-blur-sm text-white px-2 py-0.5 rounded-full text-xs font-bold shadow-sm">
+                        {{ test.get_day_display }}
+                    </span>
+                </div>
+
+                {# Test Date #}
+                <p class="absolute bottom-4 left-5 text-indigo-100 text-sm opacity-90">
+                    <span class="bg-black/20 px-2 py-1 rounded">{{ test.test_date|date:"d E Y" }}</span>
+                </p>
+                
+                {# Empty div for content to take space #}
+                <div></div> 
+            </div>
+
+            {# --- Тело карточки --- #}
+            <div class="p-5 flex-grow">
+                {# Test Name - Now prominent and dark #}
+                <h3 class="font-bold text-xl leading-tight line-clamp-2 text-gray-900 mb-3 group-hover:text-indigo-700 transition-colors">
+                    {{ test.name }}
+                </h3>
+
+                <div class="flex items-center mb-3">
+                    <span class="bg-gray-100 text-gray-600 text-xs font-bold px-2 py-1 rounded uppercase tracking-wide">
+                        {{ test.school_class.name }} класс
+                    </span>
+                    <span class="ml-2 text-xs text-gray-400">{{ test.school.name|truncatechars:20 }}</span>
+                </div>
+
+                {# Список предметов (кратко) #}
+                <div class="mb-4">
+                    <p class="text-xs text-gray-400 uppercase font-semibold mb-1">Предметы:</p>
+                    <div class="flex flex-wrap gap-1">
+                        {% for question in test.questions.all|slice:":4" %}
+                            {% ifchanged question.subject %}
+                                <span class="text-xs bg-indigo-50 text-indigo-700 px-1.5 py-0.5 rounded border border-indigo-100">
+                                    {{ question.subject.abbreviation|default:question.subject.name }}
+                                </span>
+                            {% endifchanged %}
+                        {% empty %}
+                            <span class="text-xs text-gray-400">Нет предметов</span>
+                        {% endfor %}
+                        {% if test.questions.count > 4 %}
+                           <span class="text-xs text-gray-400 px-1">...</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            {# --- Подвал с действиями --- #}
+            <div class="bg-gray-50 p-4 border-t border-gray-100 flex justify-between items-center">
+                
+                {# Кнопка публикации (HTMX) #}
+                {% include 'booklet/partials/_publish_toggle.html' %}
+
+                {# Кнопка просмотра #}
+                <a href="{% url 'core:gat_test_booklet_preview' test.pk %}" 
+                   target="_blank"
+                   class="text-gray-400 hover:text-indigo-600 transition-colors transform group-hover:scale-110"
+                   title="Открыть буклет">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                    </svg>
+                </a>
+            </div>
+        </div>
+    {% empty %}
+        <div class="col-span-full py-12 text-center">
+            <div class="bg-gray-50 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+                <svg class="h-8 w-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
+            </div>
+            <h3 class="text-lg font-medium text-gray-900">Буклеты не найдены</h3>
+            <p class="text-gray-500 mt-1">Попробуйте изменить параметры поиска или фильтры.</p>
+        </div>
+    {% endfor %}
+</div>

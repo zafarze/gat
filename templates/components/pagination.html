@@ -1,0 +1,114 @@
+{# D:\GAT\templates\components\pagination.html #}
+{% load url_helpers %} {# Загружаем хелпер для сохранения GET-параметров #}
+
+{% if page_obj.has_other_pages %}
+<nav class="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6" aria-label="Pagination">
+    {# Информация о показанных элементах (на маленьких экранах) #}
+    <div class="flex-1 flex justify-between sm:hidden">
+        {% if page_obj.has_previous %}
+        <a href="?{% query_transform page=page_obj.previous_page_number %}{{ extra_params|safe }}" 
+           hx-get="?{% query_transform page=page_obj.previous_page_number %}{{ extra_params|safe }}"
+           hx-target="#{{ hx_target_id|default:'bank_question-table-container' }}" {# ID контейнера, который нужно обновить #}
+           hx-swap="outerHTML" 
+           hx-indicator="#loading-indicator"
+           class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+            Назад
+        </a>
+        {% else %}
+        <span class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-400 bg-gray-50 cursor-not-allowed">
+            Назад
+        </span>
+        {% endif %}
+        {% if page_obj.has_next %}
+        <a href="?{% query_transform page=page_obj.next_page_number %}{{ extra_params|safe }}" 
+           hx-get="?{% query_transform page=page_obj.next_page_number %}{{ extra_params|safe }}"
+           hx-target="#{{ hx_target_id|default:'bank_question-table-container' }}"
+           hx-swap="outerHTML" 
+           hx-indicator="#loading-indicator"
+           class="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+            Вперед
+        </a>
+        {% else %}
+        <span class="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-400 bg-gray-50 cursor-not-allowed">
+            Вперед
+        </span>
+        {% endif %}
+    </div>
+
+    {# Полная пагинация (на больших экранах) #}
+    <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+        {# Информация о показанных элементах #}
+        <div>
+            <p class="text-sm text-gray-700">
+                Показаны с 
+                <span class="font-medium">{{ page_obj.start_index }}</span>
+                по 
+                <span class="font-medium">{{ page_obj.end_index }}</span>
+                из 
+                <span class="font-medium">{{ page_obj.paginator.count }}</span>
+                результатов
+            </p>
+        </div>
+        {# Ссылки на страницы #}
+        <div>
+            <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                {# Ссылка "Назад" #}
+                {% if page_obj.has_previous %}
+                <a href="?{% query_transform page=page_obj.previous_page_number %}{{ extra_params|safe }}" 
+                   hx-get="?{% query_transform page=page_obj.previous_page_number %}{{ extra_params|safe }}"
+                   hx-target="#{{ hx_target_id|default:'bank_question-table-container' }}"
+                   hx-swap="outerHTML" 
+                   hx-indicator="#loading-indicator"
+                   class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                    <span class="sr-only">Назад</span>
+                    <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" /></svg>
+                </a>
+                {% else %}
+                <span class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-gray-50 text-sm font-medium text-gray-400 cursor-not-allowed">
+                    <span class="sr-only">Назад</span>
+                    <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" /></svg>
+                </span>
+                {% endif %}
+
+                {# Номера страниц #}
+                {% for num in page_obj.paginator.page_range %}
+                    {% if page_obj.number == num %}
+                        <span aria-current="page" class="z-10 bg-indigo-50 border-indigo-500 text-indigo-600 relative inline-flex items-center px-4 py-2 border text-sm font-medium">
+                            {{ num }}
+                        </span>
+                    {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                        <a href="?{% query_transform page=num %}{{ extra_params|safe }}" 
+                           hx-get="?{% query_transform page=num %}{{ extra_params|safe }}"
+                           hx-target="#{{ hx_target_id|default:'bank_question-table-container' }}"
+                           hx-swap="outerHTML" 
+                           hx-indicator="#loading-indicator"
+                           class="bg-white border-gray-300 text-gray-500 hover:bg-gray-50 relative inline-flex items-center px-4 py-2 border text-sm font-medium">
+                            {{ num }}
+                        </a>
+                    {% elif num == page_obj.number|add:'-3' or num == page_obj.number|add:'3' %}
+                         <span class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700">...</span>
+                    {% endif %}
+                {% endfor %}
+
+                {# Ссылка "Вперед" #}
+                {% if page_obj.has_next %}
+                <a href="?{% query_transform page=page_obj.next_page_number %}{{ extra_params|safe }}" 
+                   hx-get="?{% query_transform page=page_obj.next_page_number %}{{ extra_params|safe }}"
+                   hx-target="#{{ hx_target_id|default:'bank_question-table-container' }}"
+                   hx-swap="outerHTML" 
+                   hx-indicator="#loading-indicator"
+                   class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                    <span class="sr-only">Вперед</span>
+                    <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" /></svg>
+                </a>
+                {% else %}
+                 <span class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-gray-50 text-sm font-medium text-gray-400 cursor-not-allowed">
+                    <span class="sr-only">Вперед</span>
+                    <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" /></svg>
+                </span>
+                {% endif %}
+            </nav>
+        </div>
+    </div>
+</nav>
+{% endif %}

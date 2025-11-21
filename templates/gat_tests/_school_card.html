@@ -1,0 +1,79 @@
+{# D:\GAT\templates\gat_tests\partials\_school_card.html (Полный исправленный код) #}
+<div id="school-card-{{ school.id }}" class="data-card p-6">
+    <div class="flex justify-between items-center mb-4">
+        <h2 class="text-xl font-bold text-gray-800">{{ school.name }}</h2>
+        {# --- Кнопка Назначить GAT Тест --- #}
+        {% if user.is_superuser %}
+        <button
+                @click="showModal = true" {# Устанавливаем Alpine переменную #}
+                hx-get="{% url 'core:gat_test_add' %}?school={{ school.pk }}" {# URL для формы #}
+                hx-target="#modal-content" {# Куда грузить #}
+                hx-swap="innerHTML"
+                hx-indicator="#modal-loading-indicator"
+                class="modern-btn primary small flex items-center gap-1.5">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" /></svg>
+            <span>Назначить GAT Тест</span>
+        </button>
+        {% endif %}
+    </div>
+
+    <div class="border border-gray-200 rounded-lg overflow-x-auto">
+        <table class="min-w-full">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="table-header">Название теста</th>
+                    <th class="table-header">Четверть</th>
+                    <th class="table-header">Дата</th>
+                    <th class="table-header">День</th>
+                    {% if user.is_superuser %}
+                    <th class="table-header text-right">Действия</th>
+                    {% endif %}
+                </tr>
+            </thead>
+            {# Добавляем ID для возможного обновления через HTMX #}
+            <tbody id="table-body-{{ school.id }}" class="bg-white divide-y divide-gray-200">
+                {% for test in tests %}
+                <tr class="hover:bg-gray-50 transition-colors">
+                    <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 border-r">{{ test.name }}</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 border-r">{{ test.quarter.name }}</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 border-r">{{ test.test_date|date:"d.m.Y" }}</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 border-r">{{ test.get_day_display }}</td>
+
+                    {% if user.is_superuser %}
+                    <td class="px-4 py-3 whitespace-nowrap text-right text-sm font-medium">
+
+                        {# --- 👇 ИСПРАВЛЕНИЕ: Заменяем button на a 👇 --- #}
+                        <a href="{% url 'core:gat_test_edit' test.pk %}"
+                           class="modern-btn secondary small">
+                            Редактировать
+                        </a>
+                        {# --- КОНЕЦ ИСПРАВЛЕНИЯ --- #}
+
+                        {# --- Ссылка Удалить Результаты --- #}
+                        <a href="{% url 'core:gat_test_delete_results' test.pk %}"
+                           class="modern-btn warning small ml-2">
+                            Удалить результаты
+                        </a>
+                        {# --- Кнопка Удалить Тест --- #}
+                        <button
+                                {# Устанавливаем переменные Alpine для окна удаления #}
+                                @click="showDeleteModal = true;
+                                        deleteUrl = '{% url 'core:gat_test_delete' test.pk %}';
+                                        deleteItemName = '{{ test.name|escapejs }}';"
+                                class="modern-btn danger small ml-2">
+                            Удалить тест
+                        </button>
+                    </td>
+                    {% endif %}
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="{% if user.is_superuser %}5{% else %}4{% endif %}" class="px-4 py-6 text-center text-sm text-gray-500">
+                        Для этой школы нет назначенных тестов.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>

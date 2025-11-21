@@ -1,0 +1,49 @@
+{# D:\GAT\templates\gat_tests\assembly_form.html (ПОЛНЫЙ КОД С КНОПКОЙ) #}
+{% load widget_tweaks %}
+{% load static %}
+
+<div class="page-header">
+    <a href="{% url 'core:gat_test_list' %}" class="back-link">&larr; Назад к списку тестов</a>
+    
+    {# --- ✨ ВОТ ИЗМЕНЕНИЕ ✨ --- #}
+    <div class="flex items-center gap-4">
+        <h1 class="page-title mt-1">{{ title }}</h1>
+        
+        {# --- ✨ ЭТА КНОПКА-ССЫЛКА ПОЯВИТСЯ ✨ --- #}
+        <a href="{% url 'core:gat_test_booklet_preview' object.pk %}" 
+           target="_blank" 
+           class="modern-btn secondary small"
+           title="Открыть буклет в новой вкладке">
+            Предпросмотр
+        </a>
+        {# --- ✨ КОНЕЦ ИЗМЕНЕНИЯ ✨ --- #}
+    </div>
+    {# --- ✨ КОНЕЦ ИЗМЕНЕНИЯ ✨ --- #}
+</div>
+
+{# Обертка для двух колонок #}
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+
+    {# --- ЛЕВАЯ КОЛОНКА: Форма Параметров Теста --- #}
+    <div class="data-card p-8">
+        <h2 class="text-xl font-semibold mb-6 border-b pb-3">1. Параметры теста</h2>
+        
+        <form id="gat-test-details-form" 
+              method="post"
+              hx-post="{% url 'core:gat_test_edit' object.pk %}"
+              hx-target="#gat-test-details-form"
+              hx-swap="outerHTML">
+             {% csrf_token %}
+
+            {# Включаем отдельный шаблон для полей формы #}
+            {% include "gat_tests/partials/_assembly_form_fields.html" %}
+            
+        </form>
+    </div>
+
+    {# --- ПРАВАЯ КОЛОНКА: Выбор Вопросов --- #}
+    <div id="question-selection-panel" class="data-card p-8">
+        {# Включаем частичный шаблон #}
+        {% include "gat_tests/partials/_assembly_panel.html" %}
+    </div>
+</div>

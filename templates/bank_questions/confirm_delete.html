@@ -1,0 +1,44 @@
+{# D:\GAT\templates\bank_questions\confirm_delete.html #}
+
+{# Этот div управляется Alpine.js из base.html (isDeleteModalOpen) #}
+<div class="bg-white rounded-lg shadow-xl overflow-hidden" @click.away="isDeleteModalOpen = false">
+
+    {# --- Шапка модального окна --- #}
+    <div class="px-6 py-4 bg-red-50 border-b border-red-200 flex justify-between items-center">
+        <h3 class="text-lg font-medium leading-6 text-red-900">{{ title|default:"Подтвердите удаление вопроса" }}</h3>
+        <button @click="isDeleteModalOpen = false" class="text-red-400 hover:text-red-600">
+            <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+        </button>
+    </div>
+
+    {# --- Содержимое --- #}
+    <div class="p-6">
+        <p class="text-sm text-gray-600">
+            Вы уверены, что хотите удалить вопрос из Банка: <br>
+            <strong class="text-lg text-gray-900">"{{ object.text|truncatechars:100|default:"этот вопрос" }}"</strong>?
+        </p>
+         <p class="mt-2 text-sm text-red-700 font-semibold">
+            Это действие необратимо. Связанные варианты ответов также будут удалены.
+         </p>
+    </div>
+
+    {# --- Кнопки (Футер) --- #}
+    <div class="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end space-x-3">
+         <button
+            type="button"
+            @click="isDeleteModalOpen = false" {# Просто закрывает модальное окно #}
+            class="btn btn-secondary">
+            Отмена
+        </button>
+        <button
+            {# Используем URL для удаления BankQuestion #}
+            hx-post="{% url 'core:bank_question_delete' object.pk %}"
+            {# Используем базовую логику HtmxDeleteView, которая отправит 'force-refresh' #}
+            {# Поэтому hx-target и hx-swap здесь не нужны, список обновится сам #}
+            class="btn btn-danger">
+            Удалить
+        </button>
+    </div>
+</div>

@@ -1,0 +1,364 @@
+/* D:\GAT\static\css\booklet.css */
+
+/* --- 1. ГЛОБАЛЬНЫЙ СБРОС --- */
+*, *::before, *::after {
+    box-sizing: border-box;
+}
+
+/* --- Базовые стили (С ЦЕНТРИРОВАНИЕМ ЛИСТА) --- */
+body {
+    background-color: #525659;
+    font-family: 'Palatino Linotype', serif;
+    line-height: 1.3;
+    font-size: 14px;
+    margin: 0;
+    padding: 40px 0;
+    
+    /* Центрирование содержимого */
+    display: flex;
+    flex-direction: column;
+    align-items: center; 
+    min-height: 100vh;
+}
+
+/* Индикатор сохранения */
+#save-status-indicator {
+    position: fixed; top: 20px; right: 20px;
+    background: white; padding: 10px 20px;
+    border-radius: 30px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    font-family: sans-serif; font-weight: bold; font-size: 14px;
+    z-index: 9999; opacity: 0; transition: opacity 0.3s;
+    pointer-events: none; border-left: 4px solid #2563eb;
+}
+
+#source-container { display: none !important; }
+
+/* --- ЛИСТ (A4) --- */
+.sheet {
+    width: 210mm; height: 297mm;
+    margin-bottom: 30px; 
+    padding: 10mm 15mm; 
+    background-color: #ffffff;
+    box-shadow: 0 0 15px rgba(0,0,0,0.5);
+    
+    display: flex; 
+    flex-direction: column;
+    overflow: hidden; 
+    position: relative;
+}
+
+.sheet-header { flex-shrink: 0; margin-bottom: 10px; }
+
+/* --- ФУТЕР --- */
+.sheet-footer { 
+    flex-shrink: 0; 
+    margin-top: auto; 
+    width: 100%;      
+}
+
+.footer-content { 
+    border-top: 1px solid black; 
+    width: 100%; 
+    text-align: center; 
+    font-weight: bold; 
+    font-size: 12px; 
+    padding-top: 2px;
+    margin-top: 5px;
+}
+
+/* --- ТЕЛО ЛИСТА --- */
+.sheet-body {
+    flex-grow: 1; 
+    display: flex; 
+    flex-direction: row; 
+    gap: 0; 
+    height: 100%; 
+    overflow: hidden; 
+    width: 100%;
+    align-items: flex-start;
+    position: relative; 
+}
+
+/* --- КОЛОНКИ --- */
+.sheet-column {
+    display: block; 
+    flex: 1; 
+    width: 48%; 
+    height: 100%;
+    padding-bottom: 5px; 
+}
+
+.col-left { padding-right: 10mm; }
+.col-right { padding-left: 10mm; }
+
+/* Центральная линия */
+.vertical-separator {
+    position: absolute;
+    left: 50%; top: 0; bottom: 0; width: 1px;
+    background-color: #000;
+    transform: translateX(-50%);
+    z-index: 10;
+}
+
+/* Шапка теста */
+.header-grid {
+    display: grid; grid-template-columns: 1fr 1fr 1fr;
+    align-items: flex-start; font-weight: bold;
+    border-bottom: 4px double #999;
+    padding-bottom: 5px; margin-bottom: 10px;
+    font-size: 12px;
+}
+.header-left { text-align: left; }
+.header-center { text-align: center; text-transform: uppercase; }
+.header-right { text-align: right; }
+
+/* --- ЗАГОЛОВОК ПРЕДМЕТА --- */
+.subject-header-container {
+    width: 100%; margin-bottom: 10px;
+    break-after: avoid; page-break-after: avoid; break-inside: avoid;
+    display: block; 
+}
+
+.subject-title {
+    font-family: 'Times New Roman', serif;
+    font-size: 16px; font-weight: 900;
+    text-align: center; text-transform: uppercase;
+    letter-spacing: 1px; color: #000;
+    margin: 0; padding: 5px 0;
+}
+
+/* --- БЛОК ВОПРОСА --- */
+.question-item { 
+    display: block; width: 100%; margin-bottom: 12px;
+    break-inside: avoid; page-break-inside: avoid;
+    -webkit-column-break-inside: avoid;
+    position: relative; 
+}
+
+.question-item-wrapper {
+    display: flex; flex-direction: row; align-items: baseline; 
+    width: 100%; position: relative;
+}
+
+.q-num { 
+    font-weight: bold; min-width: 20px; margin-right: 5px; 
+    white-space: nowrap; flex-shrink: 0; text-align: right; 
+}
+
+.q-body {
+    flex-grow: 1; width: auto; white-space: normal; overflow-wrap: break-word;
+}
+
+.q-body p { 
+    margin: 0 0 5px 0; font-weight: bold; font-size: 14px; display: inline;
+}
+
+/* ----------------------------------------------------- */
+/* --- ✨ КАРТИНКИ И RESIZE (ОБНОВЛЕНО) ✨ --- */
+/* ----------------------------------------------------- */
+.editable-image-container {
+    position: relative; 
+    display: inline-block; /* Важно для корректного размера */
+    max-width: 100%; 
+    margin-bottom: 5px;
+    cursor: pointer;
+    border-radius: 4px;
+    /* Убрали width: 100% отсюда, чтобы работало изменение размера */
+}
+
+.editable-image-container img {
+    display: block; 
+    width: 100%; /* Заполняет контейнер */
+    height: auto; 
+    max-height: 300px; /* Ограничитель высоты */
+    object-fit: contain; 
+    margin: 0 auto; 
+}
+
+.editable-image-container:hover::after {
+    content: "📷"; position: absolute; inset: 0;
+    background: rgba(0, 0, 0, 0.3); color: white;
+    display: flex; align-items: center; justify-content: center; font-size: 24px;
+    pointer-events: none; /* Чтобы клик проходил сквозь иконку */
+}
+
+/* --- Ручка изменения размера (синий квадрат) --- */
+.resize-handle {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    width: 24px;
+    height: 24px;
+    background-color: #2563eb; /* Синий */
+    color: white;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: ew-resize; /* Курсор стрелочка */
+    border-top-left-radius: 6px;
+    z-index: 20;
+    opacity: 0; /* Скрыта */
+    transition: opacity 0.2s;
+}
+
+/* Показываем ручку при наведении на контейнер */
+.editable-image-container:hover .resize-handle {
+    opacity: 1;
+}
+
+
+/* ----------------------------------------------------- */
+/* --- Варианты ответов --- */
+/* ----------------------------------------------------- */
+.q-body ul { 
+    list-style-type: none !important; padding-left: 0; margin: 0; width: 100%;
+}
+.q-body li { 
+    list-style: none !important; margin-bottom: 2px; position: relative; 
+}
+.q-body input[type="radio"] { display: none; }
+
+.option-label { 
+    display: flex; align-items: flex-start; gap: 5px; 
+    cursor: pointer; padding: 1px 4px; border-radius: 4px; font-size: 13px; 
+}
+.option-label:hover { background-color: #e5e7eb; }
+.opt { font-weight: bold; flex: 0 0 18px; }
+.option-text { flex: 1; }
+
+/* --- УМНАЯ СЕТКА --- */
+.q-body ul.smart-grid {
+    display: grid; grid-template-columns: 1fr 1fr;
+    column-gap: 10px; row-gap: 2px;
+}
+
+/* ----------------------------------------------------- */
+/* --- ПАНЕЛЬ ИНСТРУМЕНТОВ --- */
+/* ----------------------------------------------------- */
+.toolbar {
+    position: fixed;
+    
+    /* ✨ МАГИЯ ЦЕНТРИРОВАНИЯ ПО ВЕРТИКАЛИ ✨ */
+    top: 50%; 
+    transform: translateY(-50%); 
+    
+    right: 30px;     
+    z-index: 9999;
+    background: rgba(30, 30, 30, 0.9); 
+    border-radius: 12px; 
+    box-shadow: 0 4px 15px rgba(0,0,0,0.4); 
+    backdrop-filter: blur(5px);
+}
+
+.toolbar-content {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 10px !important;
+    padding: 12px !important;
+}
+
+.tool-btn {
+    background: none;
+    border: none;
+    color: white;
+    font-weight: bold;
+    cursor: pointer;
+    font-size: 13px;
+    padding: 8px 16px;
+    border-radius: 8px;
+    transition: background 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 8px;
+    width: 100%;
+    text-decoration: none;
+}
+
+.tool-btn:hover { background: rgba(255,255,255,0.15); }
+.btn-pdf { background-color: #2563eb; }      
+.btn-answers { background-color: #10b981; }  
+.btn-back { color: #aaa; }                   
+.btn-back:hover { color: white; background: rgba(255,255,255,0.1); }
+
+/* Modals */
+#cropper-modal { display: none; position: fixed; z-index: 10000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.85); }
+.cropper-modal-content { background-color: #fefefe; margin: 2% auto; padding: 20px; width: 90%; max-width: 900px; height: 90%; display: flex; flex-direction: column; }
+.img-container { flex-grow: 1; overflow: hidden; background: #f0f0f0; }
+.modal-actions { margin-top: 10px; text-align: right; display: flex; justify-content: flex-end; gap: 10px; }
+.cropper-btn { padding: 8px 16px; border: none; color: white; cursor: pointer; border-radius: 4px; }
+.btn-save { background: #2563eb; }
+.btn-cancel { background: #6b7280; }
+
+
+/* --- PRINT MEDIA QUERY --- */
+@media print {
+    @page {
+        size: A4 portrait;
+        margin: 0mm !important;
+    }
+
+    html, body {
+        width: 210mm; height: 297mm;
+        margin: 0 !important; padding: 0 !important;
+        background: white;
+        display: block !important;
+    }
+
+    .sheet {
+        width: 210mm; height: 297mm;
+        margin: 0 !important; padding: 10mm 15mm !important;
+        border: none !important; box-shadow: none !important;
+        page-break-after: always; page-break-inside: avoid;
+        display: flex; float: none;
+        position: relative; left: 0; top: 0;
+    }
+
+    /* Скрываем интерфейс */
+    #save-status-indicator, 
+    #cropper-modal, 
+    .toolbar, 
+    .resize-handle /* Скрываем ручку при печати */
+    { 
+        display: none !important; 
+    }
+    
+    * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+    .vertical-separator { background-color: #000 !important; }
+    a { text-decoration: none; color: black; }
+    
+    .q-body ul.smart-grid { 
+        display: grid !important; 
+        grid-template-columns: 1fr 1fr !important; 
+    }
+    
+    .correct-answer-highlight .option-label { 
+        background-color: transparent !important; 
+        border: none !important; 
+    }
+    .correct-answer-highlight .opt { color: black !important; }
+}
+
+/* Подсветка ответов (только на экране) */
+.correct-answer-highlight .option-label {
+    background-color: #dcfce7 !important;
+    border: 1px solid #10b981;
+    border-radius: 4px;
+}
+.correct-answer-highlight .opt { color: #059669; font-weight: 900; }
+
+/* Кнопка Ч/Б режима */
+.btn-bw { 
+    background-color: #4b5563; /* Серый цвет */
+}
+.btn-bw:hover { 
+    background-color: #374151; 
+}
+
+/* --- ✨ РЕЖИМ ЧЕРНО-БЕЛОГО ПРОСМОТРА ✨ --- */
+/* Когда у body есть этот класс, все внутри листов становится серым */
+body.grayscale-preview .sheet {
+    filter: grayscale(100%); /* Превращает все цвета и ФОТО в ч/б */
+}

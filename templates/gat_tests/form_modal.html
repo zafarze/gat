@@ -1,0 +1,8 @@
+{# D:\GAT\templates\gat_tests\form_modal.html (ОБНОВЛЕННАЯ ВЕРСИЯ) #}
+{% load widget_tweaks %}
+
+{# --- Добавляем @click.away сюда --- #}
+<div class="flex flex-col bg-white rounded-xl shadow-2xl max-h-full" @click.away="showModal = false">
+    {# Включаем содержимое формы #}
+    {% include "gat_tests/partials/_form_content.html" %}
+</div>

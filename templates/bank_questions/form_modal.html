@@ -1,0 +1,25 @@
+{# D:\GAT\templates\bank_questions\form_modal.html #}
+
+{# Этот div управляется Alpine.js из base.html (isModalOpen) #}
+<div class="bg-white rounded-lg shadow-xl overflow-hidden" @click.away="isModalOpen = false">
+
+    {# --- Шапка модального окна --- #}
+    <div class="px-6 py-4 bg-gray-50 border-b border-gray-200 flex justify-between items-center">
+        {# Заголовок будет передан из view (CreateView/UpdateView) #}
+        <h3 class="text-lg font-medium leading-6 text-gray-900">{{ title|default:"Вопрос из Банка" }}</h3>
+        {# Кнопка закрытия окна (крестик) #}
+        <button @click="isModalOpen = false" class="text-gray-400 hover:text-gray-600">
+            <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+        </button>
+    </div>
+
+    {# --- Контейнер для содержимого формы --- #}
+    {# Сюда HTMX будет загружать _form_content.html при GET-запросе #}
+    {# При POST-запросе (если валидация не прошла), view перерисует этот же div #}
+    <div id="modal-form-content">
+        {% include 'bank_questions/partials/_form_content.html' %}
+    </div>
+
+</div>

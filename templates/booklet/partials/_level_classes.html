@@ -1,0 +1,35 @@
+{# templates/booklet/partials/_level_classes.html #}
+
+{# Навигация (Хлебные крошки) #}
+<div class="mb-6 flex items-center text-sm text-gray-500">
+    <button hx-get="{% url 'core:booklet_catalog' %}" hx-target="#catalog-content" class="hover:text-indigo-600 flex items-center">
+        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+        Все школы
+    </button>
+    <span class="mx-2">/</span>
+    <span class="font-bold text-gray-800">{{ school.name }}</span>
+</div>
+
+<h2 class="text-2xl font-bold text-gray-800 mb-6">Выберите класс</h2>
+
+<div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 animate-fade-in">
+    {% for class in classes %}
+    <div class="bg-white p-6 rounded-xl shadow-sm hover:shadow-md transition-all border border-gray-100 cursor-pointer text-center group"
+         hx-get="{% url 'core:booklet_catalog' %}?school_id={{ school.id }}&class_id={{ class.id }}"
+         hx-target="#catalog-content"
+         hx-push-url="true">
+        
+        <div class="text-3xl font-bold text-gray-300 group-hover:text-indigo-600 mb-2 transition-colors">
+            {{ class.name }}
+        </div>
+        <p class="text-xs text-gray-500 uppercase tracking-wide">Класс</p>
+        <span class="inline-block mt-2 px-2 py-1 bg-gray-100 text-xs rounded-full text-gray-600">
+            {{ class.tests_count }} тестов
+        </span>
+    </div>
+    {% empty %}
+    <div class="col-span-full text-center py-10 text-gray-500">
+        В этой школе пока нет классов с тестами.
+    </div>
+    {% endfor %}
+</div>

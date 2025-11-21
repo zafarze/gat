@@ -1,0 +1,88 @@
+{# D:\GAT\templates\gat_tests\partials\_assembly_form_fields.html #}
+{# Этот файл содержит ТОЛЬКО поля формы из левой колонки #}
+{% load widget_tweaks %}
+
+{% if form.non_field_errors %}
+<div class="p-3 bg-red-100 text-red-700 rounded-lg mb-4">
+    {% for error in form.non_field_errors %}<p>{{ error }}</p>{% endfor %}
+</div>
+{% endif %}
+
+{# --- Поля формы --- #}
+<div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+    {# Левая Колонка формы #}
+    <div class="space-y-4">
+        <div>
+            <label for="{{ form.name.id_for_label }}" class="modern-label">{{ form.name.label }}</label>
+            {% render_field form.name class+="form-input" %}
+            {% for error in form.name.errors %}<p class="form-error mt-1">{{ error }}</p>{% endfor %}
+        </div>
+        <div>
+            <label for="{{ form.test_number.id_for_label }}" class="modern-label">{{ form.test_number.label }}</label>
+            {% render_field form.test_number class+="form-select" %}
+            {% for error in form.test_number.errors %}<p class="form-error mt-1">{{ error }}</p>{% endfor %}
+        </div>
+         <div>
+            <label for="{{ form.day.id_for_label }}" class="modern-label">{{ form.day.label }}</label>
+            {% render_field form.day class+="form-select" %}
+            {% for error in form.day.errors %}<p class="form-error mt-1">{{ error }}</p>{% endfor %}
+        </div>
+    </div>
+    {# Правая Колонка формы #}
+    <div class="space-y-4">
+         <div>
+            <label for="{{ form.quarter.id_for_label }}" class="modern-label">{{ form.quarter.label }}</label>
+            {% render_field form.quarter class+="form-select" %}
+            {% for error in form.quarter.errors %}<p class="form-error mt-1">{{ error }}</p>{% endfor %}
+        </div>
+        <div>
+            <label for="{{ form.test_date.id_for_label }}" class="modern-label">{{ form.test_date.label }}</label>
+            {% render_field form.test_date type="date" class+="form-input" %}
+            {% for error in form.test_date.errors %}<p class="form-error mt-1">{{ error }}</p>{% endfor %}
+        </div>
+         <div>
+            <label for="{{ form.school.id_for_label }}" class="modern-label">{{ form.school.label }}</label>
+            {# Поле Школа - статичное при редактировании #}
+            <input type="text" value="{{ object.school.name|default:form.school.field.queryset.0 }}" class="form-input bg-gray-100" disabled>
+            <input type="hidden" name="{{ form.school.name }}" value="{{ form.school.value }}">
+            {% for error in form.school.errors %}<p class="form-error mt-1">{{ error }}</p>{% endfor %}
+        </div>
+    </div>
+    {# Поле Класс - статичное при редактировании #}
+    <div class="md:col-span-2 space-y-4">
+         <div>
+            <label for="{{ form.school_class.id_for_label }}" class="modern-label">{{ form.school_class.label }}</label>
+            <input type="text" value="{{ object.school_class.name|default:form.school_class.field.queryset.0 }}" class="form-input bg-gray-100" disabled>
+            <input type="hidden" name="{{ form.school_class.name }}" value="{{ form.school_class.value }}">
+             {% for error in form.school_class.errors %}<p class="form-error mt-1">{{ error }}</p>{% endfor %}
+        </div>
+    </div>
+    {# Чекбоксы Перемешивания #}
+     <div class="md:col-span-2 border-t pt-4 space-y-3">
+         <div class="relative flex items-start">
+            <div class="flex items-center h-5">
+                {% render_field form.shuffle_questions class+="form-checkbox" %}
+            </div>
+            <div class="ml-3 text-sm">
+                <label for="{{ form.shuffle_questions.id_for_label }}" class="font-medium text-gray-700">{{ form.shuffle_questions.label }}</label>
+                {% if form.shuffle_questions.help_text %}<p class="text-xs text-gray-500">{{ form.shuffle_questions.help_text }}</p>{% endif %}
+            </div>
+         </div>
+         <div class="relative flex items-start">
+            <div class="flex items-center h-5">
+                {% render_field form.shuffle_options class+="form-checkbox" %}
+            </div>
+            <div class="ml-3 text-sm">
+                <label for="{{ form.shuffle_options.id_for_label }}" class="font-medium text-gray-700">{{ form.shuffle_options.label }}</label>
+                {% if form.shuffle_options.help_text %}<p class="text-xs text-gray-500">{{ form.shuffle_options.help_text }}</p>{% endif %}
+             </div>
+         </div>
+     </div>
+</div>
+
+{# Кнопка Сохранить для основной формы #}
+<div class="flex justify-end pt-8 border-t mt-8">
+    <button type="submit" class="modern-btn primary">
+        Сохранить параметры теста
+    </button>
+</div>

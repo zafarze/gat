@@ -1,0 +1,22 @@
+{# templates/booklet/partials/_level_booklets.html #}
+
+{# Навигация #}
+<div class="mb-6 flex items-center text-sm text-gray-500">
+    <button hx-get="{% url 'core:booklet_catalog' %}?school_id={{ school.id }}" hx-target="#catalog-content" class="hover:text-indigo-600 hidden sm:block">{{ school.name }}</button>
+    <span class="mx-2 hidden sm:block">/</span>
+    
+    {# Ссылка на выбор GAT #}
+    <button hx-get="{% url 'core:booklet_catalog' %}?school_id={{ school.id }}&class_id={{ current_class.id }}" 
+            hx-target="#catalog-content" 
+            class="hover:text-indigo-600 flex items-center">
+        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+        {{ current_class.name }} Класс
+    </button>
+    
+    <span class="mx-2">/</span>
+    <span class="font-bold text-gray-800">GAT-{{ current_gat }}</span>
+</div>
+
+<h2 class="text-2xl font-bold text-gray-800 mb-6">Буклеты (День 1 и 2)</h2>
+
+{% include 'booklet/partials/_booklet_grid.html' %}

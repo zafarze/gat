@@ -1,0 +1,111 @@
+{# D:\GAT\templates\bank_questions\_table.html (ПОЛНАЯ ИСПРАВЛЕННАЯ ВЕРСИЯ С ГЛАЗКОМ) #}
+{% load custom_filters %} {# Загружаем кастомные фильтры #}
+
+<div class="overflow-x-auto bg-white shadow-md rounded-lg">
+    <table class="min-w-full divide-y divide-gray-200">
+        <thead class="bg-gray-50">
+            <tr>
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Вопрос (начало)
+                </th>
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Тема
+                </th>
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Предмет / Класс
+                </th>
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Сложность
+                </th>
+                 <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Автор
+                </th>
+                <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Действия
+                </th>
+            </tr>
+        </thead>
+        <tbody class="bg-white divide-y divide-gray-200">
+            {% for item in items %} {# Цикл по объектам BankQuestion #}
+            <tr id="bank_question-row-{{ item.pk }}"> {# Уникальный ID для строки #}
+                <td class="px-6 py-4">
+                    <div class="flex items-center space-x-2">
+                        {# --- Отображение изображения вопроса, если оно есть --- #}
+                        {% if item.question_image %}
+                        <img src="{{ item.question_image.url }}" alt="Изображение к вопросу" class="h-10 w-10 object-cover rounded flex-shrink-0">
+                        {% endif %}
+                        {# --- Конец отображения изображения --- #}
+                        {# Показываем начало текста вопроса #}
+                        <span class="text-sm text-gray-900">{{ item.text|truncatechars:80 }}</span>
+                    </div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="text-sm text-gray-900">{{ item.topic.name }}</div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="text-sm text-gray-900">{{ item.subject.name }}</div>
+                    <div class="text-xs text-gray-500">{{ item.school_class.name }} кл.</div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                    {# Отображение сложности с использованием кастомного фильтра #}
+                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full
+                        {% if item.difficulty == 'EASY' %} bg-green-100 text-green-800
+                        {% elif item.difficulty == 'MEDIUM' %} bg-yellow-100 text-yellow-800
+                        {% else %} bg-red-100 text-red-800 {% endif %}">
+                        {{ item.difficulty|format_difficulty }}
+                    </span>
+                </td>
+                 <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="text-sm text-gray-500">{{ item.author.get_full_name|default:item.author.username|default:"N/A" }}</div>
+                 </td>
+                <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
+
+                    {# --- 👇 ВОТ КНОПКА "ПРОСМОТР" (ГЛАЗОК) 👇 --- #}
+                    <button
+                        {# Вызывает событие Alpine.js, передавая URL для загрузки #}
+                        @click.prevent="$dispatch('open-preview-modal', { url: '{% url 'core:bank_question_preview' item.pk %}' })"
+                        class="text-blue-600 hover:text-blue-900 inline-block align-middle" title="Просмотр"> {# Добавлены классы для выравнивания #}
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                            <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
+                            <path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.022 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd" />
+                        </svg>
+                    </button>
+                    {# --- КОНЕЦ КНОПКИ "ПРОСМОТР" --- #}
+
+                    {# --- Кнопка Редактировать --- #}
+                    <button
+                        @click.prevent="$dispatch('open-modal', { url: '{% url edit_url item.pk %}' })"
+                        class="text-indigo-600 hover:text-indigo-900 inline-block align-middle" title="Редактировать"> {# Добавлены классы #}
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                            <path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" />
+                            <path fill-rule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clip-rule="evenodd" />
+                        </svg>
+                    </button>
+
+                    {# --- Кнопка Удалить --- #}
+                    <button
+                        @click.prevent="$dispatch('open-delete-modal', { url: '{% url delete_url item.pk %}' })"
+                        class="text-red-600 hover:text-red-900 inline-block align-middle" title="Удалить"> {# Добавлены классы #}
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" />
+                        </svg>
+                    </button>
+
+                </td>
+            </tr>
+            {% empty %} {# Сообщение, если список вопросов пуст #}
+            <tr>
+                <td colspan="6" class="px-6 py-4 whitespace-nowrap text-center text-gray-500">
+                    Нет вопросов для отображения по выбранным фильтрам.
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{# --- Пагинация --- #}
+{# Включаем шаблон пагинации, если есть страницы #}
+{% if page_obj %}
+    {% include 'components/pagination.html' with page_obj=page_obj extra_params=request.GET.urlencode %}
+{% endif %}

@@ -1,0 +1,196 @@
+/* D:\New_GAT\static\css\input.css */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+    /* Основная цветовая схема */
+    :root {
+        --primary: #4f46e5;         /* Indigo 600 */
+        --primary-dark: #4338ca;    /* Indigo 700 */
+        --primary-light: #c7d2fe;   /* Indigo 200 */
+        --text-main: #1f2937;       /* Gray 800 */
+        --text-light: #6b7280;      /* Gray 500 */
+        --border-color: #e5e7eb;    /* Gray 200 */
+        --accent: #10b981;          /* Emerald 500 */
+        
+        /* Тени и радиусы для Deep Analysis */
+        --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+        --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+        --radius: 12px;
+        --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    body {
+        @apply bg-gray-100 font-sans text-[var(--text-main)] antialiased;
+    }
+    
+    /* Кастомные заголовки */
+    h1, h2, h3, h4 {
+        @apply font-bold;
+    }
+}
+
+@layer components {
+    /* === ОБЩИЕ КОМПОНЕНТЫ UI === */
+    .data-card {
+        @apply bg-white p-6 rounded-xl shadow-md;
+    }
+    
+    .modern-label {
+        @apply block text-sm font-semibold text-[var(--text-light)] mb-2 tracking-wide;
+    }
+    
+    .modern-input {
+        @apply block w-full px-4 py-2.5 bg-white border border-[var(--border-color)] rounded-lg shadow-sm
+               transition
+               focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary-light)];
+    }
+
+    /* Кнопки */
+    .modern-btn {
+        @apply inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg font-semibold
+               transition-transform transform
+               focus:outline-none focus:ring-2 focus:ring-offset-2 active:scale-95;
+    }
+    .modern-btn.primary {
+        @apply bg-[var(--primary)] text-white shadow-sm hover:bg-[var(--primary-dark)] focus:ring-[var(--primary)];
+    }
+    .modern-btn.secondary {
+        @apply bg-gray-200 text-gray-800 hover:bg-gray-300 focus:ring-gray-400;
+    }
+    .modern-btn.danger {
+        @apply bg-red-600 text-white shadow-sm hover:bg-red-700 focus:ring-red-500;
+    }
+    .modern-btn.small {
+        @apply px-3 py-1 text-sm;
+    }
+
+    /* Кнопки-иконки */
+    .icon-button {
+        @apply inline-flex p-2 rounded-full transition-all duration-200;
+    }
+    .icon-button:hover {
+        @apply scale-110 bg-gray-100;
+    }
+    .icon-button.blue { @apply text-blue-600; }
+    .icon-button.green { @apply text-green-600; }
+    .icon-button.yellow { @apply text-yellow-500; }
+    .icon-button.indigo { @apply text-indigo-600; }
+    .icon-button.red { @apply text-red-600; }
+
+    /* === DEEP ANALYSIS & DASHBOARD STYLES (Ported from deep_analysis.css) === */
+    
+    .gradient-text {
+        background: linear-gradient(135deg, var(--primary), var(--accent));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+
+    .glass-card {
+        background: rgba(255, 255, 255, 0.8);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        box-shadow: var(--shadow);
+        @apply rounded-xl; /* Используем Tailwind utility */
+    }
+
+    .filter-card {
+        @apply flex flex-col gap-4 p-6 bg-white rounded-xl shadow-sm transition-all duration-300 border border-gray-200;
+    }
+    .filter-card:hover {
+        @apply shadow-lg -translate-y-1;
+    }
+
+    /* Чипы фильтров */
+    .chip-container {
+        @apply flex flex-wrap gap-2 p-4 max-h-40 overflow-y-auto bg-gray-50 border border-gray-200 rounded-xl transition-colors;
+    }
+    .chip-container:focus-within {
+        @apply border-indigo-500 ring-2 ring-indigo-100;
+    }
+    .chip {
+        @apply inline-block cursor-pointer transition-transform duration-200;
+    }
+    .chip:hover {
+        @apply -translate-y-0.5;
+    }
+    .chip input {
+        @apply hidden;
+    }
+    .chip span {
+        @apply block px-3 py-1.5 rounded-lg bg-gray-200 text-gray-700 font-medium text-sm transition-colors border border-transparent;
+    }
+    .chip:hover span {
+        @apply bg-gray-300;
+    }
+    .chip input:checked + span {
+        background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+        @apply text-white shadow-md border-transparent;
+    }
+
+    /* Вкладки */
+    .tabs {
+        @apply border-b border-gray-200 mb-8 flex gap-2;
+    }
+    .tab-button {
+        @apply px-6 py-3 border-b-2 border-transparent text-gray-500 font-semibold bg-transparent
+               hover:text-indigo-600 hover:bg-indigo-50 transition-all rounded-t-lg flex items-center gap-2;
+    }
+    .tab-button.active {
+        @apply text-indigo-600 border-indigo-600 bg-indigo-50/50;
+    }
+    .tab-content {
+        @apply hidden animate-[fadeInUp_0.5s_ease-out];
+    }
+    .tab-content.active {
+        @apply block;
+    }
+
+    /* Таблицы (Heatmap) */
+    .heatmap-table {
+        @apply w-full border-collapse rounded-xl overflow-hidden shadow-sm text-sm;
+    }
+    .heatmap-table th {
+        @apply bg-[var(--primary)] text-white font-semibold p-3 text-center;
+    }
+    .heatmap-table td {
+        @apply p-3 text-center border-b border-gray-100 transition-colors;
+    }
+    .heatmap-table tr:hover td {
+        @apply bg-indigo-50/50;
+    }
+    .heatmap-table tr:last-child td {
+        @apply border-b-0;
+    }
+
+    /* Карточки Инсайтов */
+    .insight-card {
+        @apply bg-white rounded-xl p-6 shadow-sm transition-all duration-300 border-l-4 border-[var(--accent)];
+    }
+    .insight-card:hover {
+        @apply shadow-lg -translate-y-1;
+    }
+    .risk-student-card {
+        background: linear-gradient(135deg, #fef2f2, #fecaca);
+        @apply rounded-lg p-4 mb-2 border-l-4 border-red-500 transition-transform duration-200;
+    }
+    .risk-student-card:hover {
+        @apply translate-x-1;
+    }
+    
+    /* Графики */
+    .chart-datalabel {
+        font-size: 16px;
+        font-weight: 800;
+        color: #e11d48;
+        text-shadow: 1px 1px 2px white;
+    }
+}
+
+/* Анимации */
+@keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}

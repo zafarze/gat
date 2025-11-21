@@ -1,0 +1,114 @@
+{% extends 'base.html' %}
+{% load custom_filters %}
+
+{% block content %}
+{# --- Кнопка "Назад" --- #}
+<a href="{% url 'core:archive_subclasses' quarter.id parent_class.school.id parent_class.id %}" class="text-indigo-600 hover:underline mb-4 inline-block">&larr; Назад к выбору класса</a>
+
+<div class="flex justify-between items-center mb-6 action-buttons">
+    <div>
+        <h1 class="text-3xl font-bold text-gray-800">{{ title }}</h1>
+        <p class="text-sm text-gray-500">Четверть: {{ quarter.name }}</p>
+    </div>
+    <button onclick="window.print()" class="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 text-sm font-medium no-print">Печать</button>
+</div>
+
+<div x-data="{ activeTab: 'total' }">
+    <div class="border-b border-gray-200 mb-6 no-print">
+        <nav class="-mb-px flex space-x-6" aria-label="Tabs">
+            <button @click="activeTab = 'total'"
+                    :class="{ 'border-indigo-500 text-indigo-600': activeTab === 'total', 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300': activeTab !== 'total' }"
+                    class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
+                Итоговый рейтинг
+            </button>
+            <button @click="activeTab = 'gat1'"
+                    :class="{ 'border-indigo-500 text-indigo-600': activeTab === 'gat1', 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300': activeTab !== 'gat1' }"
+                    class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
+                GAT-1
+            </button>
+            <button @click="activeTab = 'gat2'"
+                    :class="{ 'border-indigo-500 text-indigo-600': activeTab === 'gat2', 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300': activeTab !== 'gat2' }"
+                    class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
+                GAT-2
+            </button>
+        </nav>
+    </div>
+
+    <div class="bg-white shadow-md rounded-lg overflow-x-auto content-to-print">
+        
+        <div x-show="activeTab === 'total'">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="table-header">Место</th>
+                        <th class="table-header">Ф.И.О</th>
+                        <th class="table-header">Класс</th>
+                        <th class="table-header text-center">Прогресс</th>
+                        <th class="table-header text-center">GAT-1</th>
+                        <th class="table-header text-center">GAT-2</th>
+                        <th class="table-header text-center">Общий балл</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% for data in students_data %}
+                    <tr class="hover:bg-gray-50">
+                        <td class="table-cell font-bold text-lg text-center">
+                            {% if forloop.counter == 1 %}🥇{% elif forloop.counter == 2 %}🥈{% elif forloop.counter == 3 %}🥉{% else %}{{ forloop.counter }}{% endif %}
+                        </td>
+                        <td class="table-cell font-medium">{{ data.student.full_name_ru }}</td>
+                        <td class="table-cell text-center">{{ data.student.school_class.name }}</td>
+                        <td class="table-cell text-center">
+                            {% if data.progress is not None %}<span class="font-semibold {% if data.progress > 0 %}text-green-600{% elif data.progress < 0 %}text-red-600{% else %}text-gray-500{% endif %}">{{ data.progress }}</span>{% else %}<span class="text-gray-400">—</span>{% endif %}
+                        </td>
+                        <td class="table-cell text-center {% if data.score1 is None %}text-gray-400{% endif %}">{{ data.score1|default:"—" }}</td>
+                        <td class="table-cell text-center {% if data.score2 is None %}text-gray-400{% endif %}">{{ data.score2|default:"—" }}</td>
+                        <td class="table-cell text-center font-bold text-indigo-600">{{ data.total_score|default:"—" }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="7" class="text-center py-10 text-gray-500">Нет данных для отображения.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div x-show="activeTab === 'gat1'">
+            {% if test_gat1 and students_data_gat1 %}
+                {% include 'results/includes/detailed_table.html' with students_data=students_data_gat1 table_header=table_header_gat1 %}
+            {% else %}
+                 <p class="p-6 text-center text-gray-500">Нет данных для GAT-1 в этой четверти.</p>
+            {% endif %}
+        </div>
+
+        <div x-show="activeTab === 'gat2'">
+            {% if test_gat2 and students_data_gat2 %}
+                {% include 'results/includes/detailed_table.html' with students_data=students_data_gat2 table_header=table_header_gat2 %}
+            {% else %}
+                <p class="p-6 text-center text-gray-500">Нет данных для GAT-2 в этой четверти.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<style>
+    @media print {
+        body { background-color: white !important; }
+        aside, header, .action-buttons, .no-print { display: none !important; }
+        main { padding: 0 !important; margin: 0 !important; }
+        .content-to-print {
+             box-shadow: none !important;
+             border: none !important;
+        }
+        /* Показываем активную вкладку при печати, если она не 'total' */
+        [x-data] > div:not(:first-child) > div {
+            display: none !important;
+        }
+        [x-data] > div:not(:first-child) > div[x-show="activeTab === 'total'"],
+        [x-data] > div:not(:first-child) > div[x-show="activeTab === 'gat1'"],
+        [x-data] > div:not(:first-child) > div[x-show="activeTab === 'gat2'"] {
+            display: block !important;
+        }
+    }
+</style>
+{% endblock %}

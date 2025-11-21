@@ -1,0 +1,63 @@
+{# D:\GAT\templates\booklet\partials\_booklet_question.html #}
+
+<div class="question-item-wrapper" 
+     data-id="{{ question.id }}" 
+     data-type="question" 
+     data-subject-id="{{ question.subject.id }}">
+    
+    <div class="q-num"></div> 
+
+    <div class="q-body">
+        {# Текст вопроса #}
+        <div class="question-text-wrapper">
+            <p class="editable-text hover:bg-yellow-50 rounded px-1 transition-colors border border-transparent hover:border-yellow-300 inline-block"
+               contenteditable="true"
+               onblur="saveText(this, 'question', {{ question.id }})">
+               {{ question.text|linebreaksbr }}
+            </p>
+        </div>
+
+        {# Картинка вопроса #}
+        {% if question.question_image %}
+            <div class="editable-image-container" 
+                 style="width: {{ question.image_width|default:'100%' }};"
+                 data-question-id="{{ question.id }}">
+                <img src="{{ question.question_image.url }}" 
+                     alt="Question Image" 
+                     onclick="openCropper(this.parentNode, {{ question.id }})">
+                <div class="resize-handle" onmousedown="initResize(event, {{ question.id }})">↔</div>
+            </div>
+        {% endif %}
+        
+        {# Варианты ответов #}
+        <ul>
+            {% for option in question.fixed_options %}
+            <li data-id="{{ option.id }}" data-is-correct="{{ option.is_correct|yesno:'true,false' }}">
+                <input type="radio" class="hidden-radio">
+                <label class="option-label" style="display: flex; align-items: flex-start;">
+                    {# Буква (A, B, C...) генерируется CSS через counter, здесь span пустой для отступа #}
+                    <span class="opt" style="margin-top: 2px;"></span> 
+                    
+                    <div style="display: flex; flex-direction: column;">
+                        {# Текст варианта #}
+                        <span class="option-text hover:bg-yellow-50 rounded px-1 transition-colors border border-transparent hover:border-yellow-300"
+                              contenteditable="true"
+                              onblur="saveText(this, 'option', {{ option.id }})">
+                              {{ option.text|linebreaksbr }}
+                        </span>
+
+                        {# --- 🔥 ДОБАВЛЕНО: КАРТИНКА ВАРИАНТА --- #}
+                        {% if option.option_image %}
+                            <img src="{{ option.option_image.url }}" 
+                                 alt="Option Image" 
+                                 class="option-img"
+                                 style="max-height: 80px; width: auto; margin-top: 5px; border-radius: 4px; border: 1px solid #eee;">
+                        {% endif %}
+                        {# --- КОНЕЦ ДОБАВЛЕНИЯ --- #}
+                    </div>
+                </label>
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+</div>

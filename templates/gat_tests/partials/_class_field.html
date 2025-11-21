@@ -1,0 +1,13 @@
+{# D:\GAT\templates\gat_tests\partials\_class_field.html (ОБНОВЛЕННАЯ ВЕРСИЯ) #}
+{% load widget_tweaks %}
+
+{# Этот div является целью для HTMX при смене школы #}
+<div class="space-y-4"> {# Добавим отступ сверху, если нужно #}
+    <label for="{{ form.school_class.id_for_label }}" class="modern-label">{{ form.school_class.label }}</label>
+    {% render_field form.school_class class+="form-select" %} {# Используем form-select #}
+    {% if form.school_class.help_text %}<p class="mt-1 text-xs text-gray-500">{{ form.school_class.help_text|safe }}</p>{% endif %}
+    {% if form.school_class.errors %}<p class="form-error mt-1">{{ error }}</p>{% endif %}
+</div>
+
+{# --- УБИРАЕМ ВСЁ, ЧТО СВЯЗАНО С SUBJECTS И QUESTION COUNTS --- #}
+{# Старый код с form.subjects и questions_{id} здесь больше не нужен #}

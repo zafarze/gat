@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    {% load static %}
+    <title>{{ page_title }}</title>
+    
+    {# Шрифты для академического стиля #}
+    <link href="https://fonts.googleapis.com/css2?family=Merriweather:wght@400;700;900&display=swap" rel="stylesheet">
+    
+    {# Твои стили #}
+    <link rel="stylesheet" href="{% static 'css/booklet.css' %}">
+    
+    {# Стили для Cropper (обрезка фото) #}
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
+    
+    {# HTMX для редактирования текста на лету #}
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+</head>
+<body hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+    
+    {# --- Индикатор сохранения (появляется при изменениях) --- #}
+    <div id="save-status-indicator">Все изменения сохранены</div>
+
+    {# --- Модальное окно для обрезки изображений --- #}
+    <div id="cropper-modal">
+        <div class="cropper-modal-content">
+            <div class="img-container"><img id="image-to-crop" src=""></div>
+            <div class="modal-actions">
+                <button id="btn-cancel-crop" class="cropper-btn btn-cancel">Отмена</button>
+                <button id="btn-save-crop" class="cropper-btn btn-save">Сохранить</button>
+            </div>
+        </div>
+    </div>
+
+    {# --- ИСХОДНЫЙ КОНТЕЙНЕР (Скрыт, отсюда JS берет вопросы) --- #}
+    <div id="source-container" style="display: none;">
+    {% for question in all_questions %}
+        
+        {% ifchanged question.subject.id %}
+            {# Заголовок предмета #}
+            <div class="content-element subject-header-container" 
+                 data-type="title" 
+                 data-subject-id="{{ question.subject.id }}">
+                 
+                <h2 class="subject-title" {% if not forloop.first %}style="margin-top: 25px;"{% endif %}>
+                    {{ question.subject.name }}
+                </h2>
+            </div>
+        {% endifchanged %}
+
+        {# Сам вопрос (внутри partials уже есть нужные data-атрибуты) #}
+        <div class="content-element question-item" 
+             data-id="{{ question.id }}" 
+             data-type="question" 
+             data-subject-id="{{ question.subject.id }}">
+            {% include "booklet/partials/_booklet_question.html" with question=question %}
+        </div>
+
+    {% endfor %}
+    </div>
+
+    {# --- СЮДА JS БУДЕТ ГЕНЕРИРОВАТЬ СТРАНИЦЫ А4 --- #}
+    <div id="pages-root"></div>
+
+    {# --- ПАНЕЛЬ УПРАВЛЕНИЯ (TOOLBAR) --- #}
+    <div class="toolbar">
+        <div class="toolbar-content">
+            <button onclick="toggleAnswers()" class="tool-btn btn-answers">
+                👁️ Ответы
+            </button>
+            
+            <button onclick="toggleGrayscale()" class="tool-btn btn-bw">
+                ⚫⚪ Ч/Б вид
+            </button>
+
+            <a href="{% url 'core:gat_test_download_pdf' test.pk %}" class="tool-btn btn-pdf" style="text-decoration: none; display: inline-flex; align-items: center;">
+                📄 Скачать PDF
+            </a>
+
+            <a href="{% url 'core:gat_test_export_word' test.pk %}" class="tool-btn btn-pdf" style="background-color: #2b579a; text-decoration: none; display: inline-flex; align-items: center;">
+                📝 Скачать Word
+            </a>
+
+            <a href="{% url 'core:gat_test_list' %}" class="tool-btn btn-back" style="text-decoration: none; display: inline-flex; align-items: center;">
+                ⬅️ Назад
+            </a>
+        </div>
+    </div>
+
+    {# --- ШАБЛОН ШАПКИ СТРАНИЦЫ --- #}
+    <template id="header-template">
+        <div class="header-grid">
+            <div class="header-left">{{ header_left }}</div>
+            <div class="header-center">{{ header_center }}</div>
+            <div class="header-right">{{ header_right }}</div>
+        </div>
+    </template>
+
+    {# --- ШАБЛОН ПОДВАЛА СТРАНИЦЫ --- #}
+    <template id="footer-template">
+        <div class="footer-content">
+            <span class="page-number">1</span>
+        </div>
+    </template>
+
+    {# --- СКРИПТЫ --- #}
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
+    
+    {# Данные для JS #}
+    <script id="booklet-data" type="application/json">
+    {
+        "saveUrl": "{% url 'core:gat_test_save_order' test.pk %}",
+        "saveOptionOrderUrl": "{% url 'core:bank_question_save_option_order' 0 %}",
+        "updateImageUrl": "{% url 'core:bank_question_update_image' 0 %}",
+        "csrfToken": "{{ csrf_token }}"
+    }
+    </script>
+    
+    {# Основной скрипт пагинации #}
+    <script src="{% static 'js/booklet.js' %}" defer></script>
+</body>
+</html>
